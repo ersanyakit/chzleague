@@ -16,6 +16,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [tradersLoading, setTradersLoading] = useState(false);
 
   // Mock data
   const nativeToken: Token = {
@@ -154,25 +155,49 @@ function App() {
   );
 
   // Fetch data function for calendar selection
-  const fetchData = (date: Date, period: 'daily' | 'weekly' | 'monthly') => {
+  const fetchData = async (date: Date, period: 'daily' | 'weekly' | 'monthly') => {
     console.log(`Fetching data for ${period} period on ${date.toLocaleDateString()}`);
-    // Here you would typically make an API call to fetch the data
-    // For now, we'll just log the request
-    // Example API call:
-    // const response = await fetch(`/api/competition-data?date=${date.toISOString()}&period=${period}`);
-    // const data = await response.json();
-    // Update your state with the fetched data
+    setTradersLoading(true);
+    
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Here you would typically make an API call to fetch the data
+      // Example API call:
+      // const response = await fetch(`/api/competition-data?date=${date.toISOString()}&period=${period}`);
+      // const data = await response.json();
+      // Update your state with the fetched data
+      
+      console.log(`Data fetched successfully for ${period} period on ${date.toLocaleDateString()}`);
+    } catch (error) {
+      console.error('Error fetching competition data:', error);
+    } finally {
+      setTradersLoading(false);
+    }
   };
 
   // Fetch token data function
-  const fetchTokenData = (token: Token) => {
+  const fetchTokenData = async (token: Token) => {
     console.log(`Fetching data for token: ${token.symbol} (${token.name})`);
-    // Here you would typically make an API call to fetch token-specific data
-    // For now, we'll just log the request
-    // Example API call:
-    // const response = await fetch(`/api/token-data?address=${token.address}`);
-    // const data = await response.json();
-    // Update your state with the fetched data
+    setTradersLoading(true);
+    
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Here you would typically make an API call to fetch token-specific data
+      // Example API call:
+      // const response = await fetch(`/api/token-data?address=${token.address}`);
+      // const data = await response.json();
+      // Update your state with the fetched data
+      
+      console.log(`Data fetched successfully for token: ${token.symbol}`);
+    } catch (error) {
+      console.error('Error fetching token data:', error);
+    } finally {
+      setTradersLoading(false);
+    }
   };
 
   return (
@@ -259,11 +284,14 @@ function App() {
               </div>
 
               <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
-                {loading ? (
-                  <div className="flex items-center justify-center h-32">
+                {loading || tradersLoading ? (
+                  <div className="flex flex-col items-center justify-center h-32 gap-3">
                     <div className={`animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 ${
                       isDarkMode ? 'border-red-400' : 'border-red-600'
                     }`} />
+                    <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {loading ? 'Loading traders...' : 'Fetching new data...'}
+                    </div>
                   </div>
                 ) : (
                   filteredEntries.map((entry, index) => (
@@ -355,11 +383,14 @@ function App() {
                 </div>
 
                 <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
-                  {loading ? (
-                    <div className="flex items-center justify-center h-32">
+                  {loading || tradersLoading ? (
+                    <div className="flex flex-col items-center justify-center h-32 gap-3">
                       <div className={`animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 ${
                         isDarkMode ? 'border-red-400' : 'border-red-600'
                       }`} />
+                      <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {loading ? 'Loading traders...' : 'Fetching new data...'}
+                      </div>
                     </div>
                   ) : (
                     filteredEntries.map((entry, index) => (
