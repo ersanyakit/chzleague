@@ -112,7 +112,7 @@ const SimpleTokenList: React.FC<SimpleTokenListProps> = ({
       isDarkMode ? 'bg-gray-800/40' : 'bg-white/80'
     } backdrop-blur-sm p-4 rounded-xl border ${
       isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
-    } h-[100dvh]`}>
+    } h-[50vh] lg:h-[100dvh]`}>
       <h3 className={`font-semibold text-sm mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
         Chiliz Tokens
       </h3>
@@ -136,7 +136,7 @@ const SimpleTokenList: React.FC<SimpleTokenListProps> = ({
       </div>
 
       {/* Token List */}
-      <div className="space-y-2 max-h-[85dvh] overflow-y-auto scrollbar-hide">
+      <div className="space-y-2 max-h-[calc(50vh-120px)] lg:max-h-[85dvh] overflow-y-auto scrollbar-hide">
         {loading && (
           <div className="flex items-center justify-center py-4">
             <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>

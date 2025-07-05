@@ -180,30 +180,140 @@ function App() {
     entry.twitterHandle?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Fetch data function for calendar selection
+  const fetchData = (date: Date, period: 'daily' | 'weekly' | 'monthly') => {
+    console.log(`Fetching data for ${period} period on ${date.toLocaleDateString()}`);
+    // Here you would typically make an API call to fetch the data
+    // For now, we'll just log the request
+    // Example API call:
+    // const response = await fetch(`/api/competition-data?date=${date.toISOString()}&period=${period}`);
+    // const data = await response.json();
+    // Update your state with the fetched data
+  };
+
   return (
     <div className={`min-h-screen transition-all duration-300 ${
       isDarkMode 
         ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
         : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
     }`}>
-      {/* Minimal Header */}
-      <div className="sticky top-0 z-50 backdrop-blur-xl ">
-   
-      <div className='w-full'>
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 backdrop-blur-xl">
+        <div className='w-full'>
           <VolumeCompetitionCalendar
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-                isDarkMode={isDarkMode}
-              />
-          </div>
-      
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            isDarkMode={isDarkMode}
+            onFetchData={fetchData}
+          />
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <div className="max-w-6xl mx-auto">
-         
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          
+          {/* Mobile Layout */}
+          <div className="block lg:hidden space-y-4">
+            {/* Token List - Full Width on Mobile */}
+            <div className="w-full">
+              <SimpleTokenList
+                tokens={mockTokens}
+                selectedToken={baseToken}
+                onTokenSelect={(token) => console.log('Selected:', token)}
+                isDarkMode={isDarkMode}
+              />
+            </div>
+
+            {/* Stats */}
+            <MinimalStats
+              stats={mockStats}
+              nativeToken={nativeToken}
+              baseToken={baseToken}
+              isDarkMode={isDarkMode}
+            />
+
+            {/* Search & Filters */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`} />
+                <input
+                  type="text"
+                  placeholder="Search traders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm ${
+                    isDarkMode 
+                      ? 'bg-gray-800/50 border-gray-700/50 text-gray-300 placeholder-gray-400' 
+                      : 'bg-white/80 border-gray-200 text-gray-700 placeholder-gray-500'
+                  } focus:outline-none focus:ring-2 focus:ring-red-500/40 backdrop-blur-sm`}
+                />
+              </div>
+              
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-3 rounded-xl border transition-all ${
+                  isDarkMode
+                    ? 'bg-gray-800/50 border-gray-700/50 text-gray-300 hover:bg-gray-700/50'
+                    : 'bg-white/80 border-gray-200 text-gray-600 hover:bg-gray-50'
+                } backdrop-blur-sm`}
+              >
+                <Filter className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Leaderboard */}
+            <div className={`${
+              isDarkMode ? 'bg-gray-900/40' : 'bg-white/60'
+            } backdrop-blur-xl p-4 rounded-xl border ${
+              isDarkMode ? 'border-gray-700/30' : 'border-white/40'
+            }`}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Top Traders
+                </h3>
+                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {filteredEntries.length} traders
+                </span>
+              </div>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
+                {loading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className={`animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 ${
+                      isDarkMode ? 'border-red-400' : 'border-red-600'
+                    }`} />
+                  </div>
+                ) : (
+                  filteredEntries.map((entry, index) => (
+                    <MinimalLeaderboardEntry
+                      key={entry.address}
+                      entry={entry}
+                      index={index}
+                      nativeToken={nativeToken}
+                      baseToken={baseToken}
+                      isDarkMode={isDarkMode}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* User Stats - Full Width on Mobile */}
+            <div className="w-full">
+              <CompactUserStats
+                userStats={mockUserStats}
+                nativeToken={nativeToken}
+                baseToken={baseToken}
+                isDarkMode={isDarkMode}
+              />
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden lg:grid lg:grid-cols-12 gap-4">
             
             {/* Token List - Left Sidebar */}
             <div className="lg:col-span-3">
@@ -217,9 +327,6 @@ function App() {
 
             {/* Main Leaderboard */}
             <div className="lg:col-span-6 space-y-4">
-              {/* Volume Competition Calendar */}
-           
-
               {/* Stats */}
               <MinimalStats
                 stats={mockStats}

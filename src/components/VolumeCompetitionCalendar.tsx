@@ -12,6 +12,7 @@ import { useTheme } from '../contexts/ThemeContext';
 interface VolumeCompetitionCalendarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
+  onFetchData?: (date: Date, period: CompetitionPeriod) => void;
   isDarkMode: boolean;
 }
 
@@ -31,6 +32,7 @@ interface CompetitionData {
 const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
   selectedDate,
   onDateSelect,
+  onFetchData,
   isDarkMode
 }) => {
   const { toggleTheme } = useTheme();
@@ -154,7 +156,7 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
     if (rank === 1) {
       return {
         bgColor: 'bg-yellow-500',
-        textColor: 'text-yellow-600',
+        textColor: isDarkMode ? 'text-yellow-300' : 'text-yellow-600',
         borderColor: 'border-yellow-300',
         icon: <Crown className="w-3 h-3 text-yellow-600" />
       };
@@ -162,7 +164,7 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
     if (rank <= 3) {
       return {
         bgColor: 'bg-orange-500',
-        textColor: 'text-orange-600',
+        textColor: isDarkMode ? 'text-orange-300' : 'text-orange-600',
         borderColor: 'border-orange-300',
         icon: <Medal className="w-3 h-3 text-orange-600" />
       };
@@ -170,7 +172,7 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
     if (rank <= 5) {
       return {
         bgColor: 'bg-red-500',
-        textColor: 'text-red-600',
+        textColor: isDarkMode ? 'text-red-300' : 'text-red-600',
         borderColor: 'border-red-300',
         icon: <Star className="w-3 h-3 text-red-600" />
       };
@@ -178,14 +180,14 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
     if (rank <= 10) {
       return {
         bgColor: 'bg-red-500',
-        textColor: 'text-red-600',
+        textColor: isDarkMode ? 'text-red-300' : 'text-red-600',
         borderColor: 'border-red-300',
         icon: <Trophy className="w-3 h-3 text-red-600" />
       };
     }
     return {
       bgColor: 'bg-gray-500',
-      textColor: 'text-gray-600',
+      textColor: isDarkMode ? 'text-gray-300' : 'text-gray-600',
       borderColor: 'border-gray-300',
       icon: <BarChart3 className="w-3 h-3 text-gray-600" />
     };
@@ -214,60 +216,65 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
         key={date.toISOString()}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className={`relative p-3 rounded-lg transition-all duration-200 border ${
+        className={`relative p-2 lg:p-3 rounded-lg transition-all duration-200 border ${
           isSelectedDay
-            ? 'bg-red-500 text-white shadow-sm border-red-400'
+            ? isDarkMode
+              ? 'bg-red-500/20 text-white shadow-md border-red-400'
+              : 'bg-red-500/20 text-red-700 shadow-md border-red-400'
             : isTodayDate
               ? isDarkMode
-                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                ? 'bg-red-500/15 text-red-300 border-red-500/25'
                 : 'bg-red-50 text-red-600 border-red-300'
               : isCurrentMonth
                 ? isDarkMode
-                  ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-600/30'
+                  ? 'bg-gray-800/30 text-gray-200 hover:bg-gray-700/40 border-gray-600/20'
                   : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
                 : isDarkMode
-                  ? 'bg-gray-900/30 text-gray-500 border-gray-700/30'
+                  ? 'bg-gray-900/20 text-gray-500 border-gray-700/20'
                   : 'bg-gray-50 text-gray-400 border-gray-200'
-        } shadow-sm hover:shadow-sm h-28 flex flex-col justify-between`}
-        onClick={() => onDateSelect(date)}
+        } shadow-sm hover:shadow-sm h-20 lg:h-28 flex flex-col justify-between`}
+        onClick={() => handleDateSelect(date)}
         disabled={!isCurrentMonth}
       >
         {/* Day Number and Active Indicator */}
         <div className="flex items-center justify-between">
-          <span className={`text-sm font-bold ${
-            isSelectedDay ? 'text-white' : 
-            isTodayDate ? 'text-red-600' : 
-            isCurrentMonth ? 'text-gray-700' : 'text-gray-400'
+          <span className={`text-xs lg:text-sm font-bold ${
+            isSelectedDay ? (isDarkMode ? 'text-white' : 'text-red-700') : 
+            isTodayDate ? (isDarkMode ? 'text-red-300' : 'text-red-600') : 
+            isCurrentMonth ? (isDarkMode ? 'text-gray-200' : 'text-gray-700') : (isDarkMode ? 'text-gray-500' : 'text-gray-400')
           }`}>
             {date.getDate()}
           </span>
           {isPast && (
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-green-500"></div>
           )}
         </div>
 
         {/* Competition Data */}
         {isCurrentMonth && (
-          <div className="space-y-1">
+          <div className="space-y-0.5 lg:space-y-1">
             <div className={`text-xs font-bold ${
-              isSelectedDay ? 'text-white' : rankStyle.textColor
+              isSelectedDay ? (isDarkMode ? 'text-white' : 'text-red-700') : rankStyle.textColor
             }`}>
               ${formatVolume(competitionData.volume)}
             </div>
-            <div className="flex items-center justify-center gap-1">
+            <div className="flex items-center justify-center gap-0.5 lg:gap-1">
               {competitionData.change >= 0 ? (
-                <TrendingUp className="w-3 h-3 text-green-500" />
+                <TrendingUp className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-green-500" />
               ) : (
-                <TrendingDown className="w-3 h-3 text-red-500" />
+                <TrendingDown className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-red-500" />
               )}
               <span className={`text-xs font-medium ${
-                competitionData.change >= 0 ? 'text-green-600' : 'text-red-600'
+                competitionData.change >= 0 ? 
+                  (isDarkMode ? 'text-green-400' : 'text-green-600') : 
+                  (isDarkMode ? 'text-red-400' : 'text-red-600')
               }`}>
                 {competitionData.change >= 0 ? '+' : ''}{competitionData.change.toFixed(1)}%
               </span>
             </div>
-            <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded ${
-              isSelectedDay ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+            <div className={`flex items-center justify-center gap-0.5 lg:gap-1 px-1 lg:px-2 py-0.5 lg:py-1 rounded ${
+              isSelectedDay ? (isDarkMode ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700') : 
+              isDarkMode ? 'bg-gray-700/50 text-gray-200' : 'bg-gray-100 text-gray-700'
             }`}>
               {rankStyle.icon}
               <span className="text-xs font-bold">#{competitionData.rank}</span>
@@ -277,8 +284,8 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
 
         {/* Selection Indicator */}
         {isSelectedDay && (
-          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
-            <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+          <div className="absolute -top-0.5 -right-0.5 lg:-top-1 lg:-right-1 w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-red-500 flex items-center justify-center">
+            <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full bg-white"></div>
           </div>
         )}
       </motion.button>
@@ -303,27 +310,32 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
         whileTap={{ scale: 0.98 }}
         className={`relative p-4 rounded-lg transition-all duration-200 border ${
           isSelectedWeek
-            ? 'bg-red-500 text-white shadow-sm border-red-400'
+            ? isDarkMode
+              ? 'bg-red-500/20 text-white shadow-md border-red-400'
+              : 'bg-red-500/20 text-red-700 shadow-md border-red-400'
             : isCurrentWeek
               ? isDarkMode
-                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                ? 'bg-red-500/15 text-red-300 border-red-500/25'
                 : 'bg-red-50 text-red-600 border-red-300'
               : isDarkMode
-                ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-600/30'
+                ? 'bg-gray-800/30 text-gray-200 hover:bg-gray-700/40 border-gray-600/20'
                 : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
         } shadow-sm hover:shadow-sm h-32 flex flex-col justify-between`}
-        onClick={() => onDateSelect(weekStart)}
+        onClick={() => handleDateSelect(weekStart)}
       >
         {/* Week Header */}
         <div className="flex items-center justify-between">
           <div className="text-center">
-            <div className={`text-sm font-bold ${
-              isSelectedWeek ? 'text-white' : rankStyle.textColor
+            <div className={`text-sm lg:text-base font-bold ${
+              isSelectedWeek ? (isDarkMode ? 'text-white' : 'text-red-700') : 
+              isCurrentWeek ? (isDarkMode ? 'text-red-300' : 'text-red-600') : 
+              isDarkMode ? 'text-gray-200' : 'text-gray-700'
             }`}>
               Week {index + 1}
             </div>
             <div className={`text-xs ${
-              isSelectedWeek ? 'text-white/70' : 'text-gray-500'
+              isSelectedWeek ? 'text-white/70' : 
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
             }`}>
               {weekStart.getDate()}-{weekEnd.getDate()} {weekStart.toLocaleDateString('en', { month: 'short' })}
             </div>
@@ -336,7 +348,7 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
         {/* Competition Data */}
         <div className="space-y-2">
           <div className={`text-sm font-bold ${
-            isSelectedWeek ? 'text-white' : rankStyle.textColor
+            isSelectedWeek ? (isDarkMode ? 'text-white' : 'text-red-700') : rankStyle.textColor
           }`}>
             ${formatVolume(competitionData.volume)}
           </div>
@@ -347,13 +359,16 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
               <TrendingDown className="w-4 h-4 text-red-500" />
             )}
             <span className={`text-xs font-medium ${
-              competitionData.change >= 0 ? 'text-green-600' : 'text-red-600'
+              competitionData.change >= 0 ? 
+                (isDarkMode ? 'text-green-400' : 'text-green-600') : 
+                (isDarkMode ? 'text-red-400' : 'text-red-600')
             }`}>
               {competitionData.change >= 0 ? '+' : ''}{competitionData.change.toFixed(1)}%
             </span>
           </div>
           <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded ${
-            isSelectedWeek ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+            isSelectedWeek ? (isDarkMode ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700') : 
+            isDarkMode ? 'bg-gray-700/50 text-gray-200' : 'bg-gray-100 text-gray-700'
           }`}>
             {rankStyle.icon}
             <span className="text-xs font-bold">#{competitionData.rank}</span>
@@ -386,27 +401,32 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
         whileTap={{ scale: 0.98 }}
         className={`relative p-4 rounded-lg transition-all duration-200 border ${
           isSelectedMonth
-            ? 'bg-red-500 text-white shadow-sm border-red-400'
+            ? isDarkMode
+              ? 'bg-red-500/20 text-white shadow-md border-red-400'
+              : 'bg-red-500/20 text-red-700 shadow-md border-red-400'
             : isCurrentMonth
               ? isDarkMode
-                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                ? 'bg-red-500/15 text-red-300 border-red-500/25'
                 : 'bg-red-50 text-red-600 border-red-300'
               : isDarkMode
-                ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-600/30'
+                ? 'bg-gray-800/30 text-gray-200 hover:bg-gray-700/40 border-gray-600/20'
                 : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
         } shadow-sm hover:shadow-sm h-32 flex flex-col justify-between`}
-        onClick={() => onDateSelect(monthStart)}
+        onClick={() => handleDateSelect(monthStart)}
       >
         {/* Month Header */}
         <div className="flex items-center justify-between">
           <div className="text-center">
-            <div className={`text-sm font-bold ${
-              isSelectedMonth ? 'text-white' : rankStyle.textColor
+            <div className={`text-sm lg:text-base font-bold ${
+              isSelectedMonth ? (isDarkMode ? 'text-white' : 'text-red-700') : 
+              isCurrentMonth ? (isDarkMode ? 'text-red-300' : 'text-red-600') : 
+              isDarkMode ? 'text-gray-200' : 'text-gray-700'
             }`}>
               {monthStart.toLocaleDateString('en', { month: 'long' })}
             </div>
             <div className={`text-xs ${
-              isSelectedMonth ? 'text-white/70' : 'text-gray-500'
+              isSelectedMonth ? 'text-white/70' : 
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
             }`}>
               {monthStart.getFullYear()}
             </div>
@@ -419,7 +439,7 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
         {/* Competition Data */}
         <div className="space-y-2">
           <div className={`text-sm font-bold ${
-            isSelectedMonth ? 'text-white' : rankStyle.textColor
+            isSelectedMonth ? (isDarkMode ? 'text-white' : 'text-red-700') : rankStyle.textColor
           }`}>
             ${formatVolume(competitionData.volume)}
           </div>
@@ -430,13 +450,16 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
               <TrendingDown className="w-4 h-4 text-red-500" />
             )}
             <span className={`text-xs font-medium ${
-              competitionData.change >= 0 ? 'text-green-600' : 'text-red-600'
+              competitionData.change >= 0 ? 
+                (isDarkMode ? 'text-green-400' : 'text-green-600') : 
+                (isDarkMode ? 'text-red-400' : 'text-red-600')
             }`}>
               {competitionData.change >= 0 ? '+' : ''}{competitionData.change.toFixed(1)}%
             </span>
           </div>
           <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded ${
-            isSelectedMonth ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+            isSelectedMonth ? (isDarkMode ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700') : 
+            isDarkMode ? 'bg-gray-700/50 text-gray-200' : 'bg-gray-100 text-gray-700'
           }`}>
             {rankStyle.icon}
             <span className="text-xs font-bold">#{competitionData.rank}</span>
@@ -460,11 +483,11 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
       const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       
       return (
-        <div className="space-y-4">
+        <div className="space-y-2 lg:space-y-4">
           {/* Week Days Header */}
-          <div className="grid grid-cols-7 gap-3">
+          <div className="grid grid-cols-7 gap-1 lg:gap-3">
             {weekDays.map(day => (
-              <div key={day} className={`text-center py-3 text-sm font-bold ${
+              <div key={day} className={`text-center py-2 lg:py-3 text-xs lg:text-sm font-bold ${
                 isDarkMode ? 'text-gray-400' : 'text-gray-600'
               }`}>
                 {day}
@@ -473,7 +496,7 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-3">
+          <div className="grid grid-cols-7 gap-1 lg:gap-3">
             {days.map(date => {
               const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
               return renderCalendarDay(date, isCurrentMonth);
@@ -505,6 +528,15 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
   const selectedData = generateCompetitionData(selectedDate, competitionPeriod);
   const periodInfo = getPeriodInfo();
 
+  // Handle date selection with collapse and data fetch
+  const handleDateSelect = (date: Date) => {
+    onDateSelect(date);
+    setIsCollapsed(true);
+    if (onFetchData) {
+      onFetchData(date, competitionPeriod);
+    }
+  };
+
   return (
     <motion.div 
       initial={false}
@@ -514,32 +546,32 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
       {/* Collapsible Header */}
       <div className={`p-6 ${isCollapsed ? 'pb-4' : ''}`}>
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-red-500/20' : 'bg-red-50'}`}>
-              <Calendar className={`w-6 h-6 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
+          <div className="flex items-center gap-2 lg:gap-4">
+            <div className={`p-2 lg:p-3 rounded-lg ${isDarkMode ? 'bg-red-500/20' : 'bg-red-50'}`}>
+              <Calendar className={`w-5 h-5 lg:w-6 lg:h-6 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
             </div>
             <div>
-              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              <h3 className={`text-lg lg:text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 Volume Competition Calendar
               </h3>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <p className={`text-xs lg:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 Advanced trading competition tracking
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 lg:gap-3">
             {/* Status Display - Always Visible */}
-            <div className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`px-2 py-1 rounded text-xs font-medium ${
+            <div className={`px-2 lg:px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <div className="flex items-center gap-1 lg:gap-3">
+                <div className={`px-1 lg:px-2 py-1 rounded text-xs font-medium ${
                   competitionPeriod === 'daily' ? 'bg-red-500/20 text-red-600' :
                   competitionPeriod === 'weekly' ? 'bg-red-500/20 text-red-600' :
                   'bg-red-500/20 text-red-600'
                 }`}>
                   {competitionPeriod.charAt(0).toUpperCase() + competitionPeriod.slice(1)}
                 </div>
-                <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                <span className={`text-xs lg:text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   {competitionPeriod === 'daily' && selectedDate.toLocaleDateString('en', { 
                     month: 'short', 
                     day: 'numeric',
@@ -558,22 +590,28 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
             </div>
 
             {/* Compact Stats - Always Visible */}
-            <div className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+            <div className={`hidden md:block px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <div className="flex items-center gap-4">
                 <div className="text-center">
-                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Volume</div>
+                  <div className={`text-xs ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>Volume</div>
                   <div className={`text-sm font-bold ${getRankStyle(selectedData.rank).textColor}`}>
                     ${formatVolume(selectedData.volume)}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Performance</div>
+                  <div className={`text-xs ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>Performance</div>
                   <div className={`text-sm font-bold ${selectedData.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {selectedData.change >= 0 ? '+' : ''}{selectedData.change.toFixed(1)}%
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Rank</div>
+                  <div className={`text-xs ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>Rank</div>
                   <div className="flex items-center gap-1 justify-center">
                     <div className={`w-5 h-5 rounded-full ${getRankStyle(selectedData.rank).bgColor} flex items-center justify-center`}>
                       <span className="text-xs font-bold text-white">{selectedData.rank}</span>
@@ -581,13 +619,17 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Participants</div>
+                  <div className={`text-xs ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>Participants</div>
                   <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     {selectedData.participants}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Prize Pool</div>
+                  <div className={`text-xs ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>Prize Pool</div>
                   <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     {formatPrizePool(selectedData.prizePool)}
                   </div>
@@ -595,7 +637,7 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
               </div>
             </div>
 
-            <div className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-green-500/20' : 'bg-green-50'}`}>
+            <div className={`hidden lg:block px-4 py-2 rounded-lg ${isDarkMode ? 'bg-green-500/20' : 'bg-green-50'}`}>
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4" />
                 <span className="text-sm font-medium">Live Competition</span>
