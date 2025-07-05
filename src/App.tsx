@@ -7,10 +7,11 @@ import MinimalLeaderboardEntry from './components/MinimalLeaderboardEntry';
 import CompactUserStats from './components/CompactUserStats';
 import SimpleTokenList from './components/SimpleTokenList';
 import { LeaderboardEntry as LeaderboardEntryType, LeaderboardStats, UserStats, Token } from './types/leaderboard';
-import { useTheme } from './contexts/ThemeContext';
+import { useTheme, useTokens } from './contexts/ThemeContext';
 
 function App() {
   const { isDarkMode, toggleTheme } = useTheme();
+  const { selectedToken } = useTokens();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,34 +43,6 @@ function App() {
     volume24h: 1800000,
     marketCap: 95000000000
   };
-
-  const mockTokens: Token[] = [
-    baseToken,
-    { 
-      chainId: 88888,
-      symbol: 'USDC', 
-      name: 'USD Coin', 
-      address: '0xa0b86a33e6441e0a7a5abcf5d45b37b1a11b7e9f', 
-      decimals: 6,
-      logoURI: '',
-      price: 1.00,
-      change24h: -0.05,
-      volume24h: 1200000,
-      marketCap: 32000000000
-    },
-    { 
-      chainId: 88888,
-      symbol: 'WETH', 
-      name: 'Wrapped Ethereum', 
-      address: '0xa0b86a33e6441e0a7a5abcf5d45b37b1a11b7e9f', 
-      decimals: 18,
-      logoURI: '',
-      price: 2450.75,
-      change24h: 8.3,
-      volume24h: 890000,
-      marketCap: 295000000000
-    }
-  ];
 
   const mockStats: LeaderboardStats = {
     totalVolume: { chz: 1250000, token: 850000, usd: 108750 },
@@ -191,6 +164,17 @@ function App() {
     // Update your state with the fetched data
   };
 
+  // Fetch token data function
+  const fetchTokenData = (token: Token) => {
+    console.log(`Fetching data for token: ${token.symbol} (${token.name})`);
+    // Here you would typically make an API call to fetch token-specific data
+    // For now, we'll just log the request
+    // Example API call:
+    // const response = await fetch(`/api/token-data?address=${token.address}`);
+    // const data = await response.json();
+    // Update your state with the fetched data
+  };
+
   return (
     <div className={`min-h-screen transition-all duration-300 ${
       isDarkMode 
@@ -203,7 +187,6 @@ function App() {
           <VolumeCompetitionCalendar
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
-            isDarkMode={isDarkMode}
             onFetchData={fetchData}
           />
         </div>
@@ -218,10 +201,7 @@ function App() {
             {/* Token List - Full Width on Mobile */}
             <div className="w-full">
               <SimpleTokenList
-                tokens={mockTokens}
-                selectedToken={baseToken}
-                onTokenSelect={(token) => console.log('Selected:', token)}
-                isDarkMode={isDarkMode}
+                onFetchData={fetchTokenData}
               />
             </div>
 
@@ -230,7 +210,6 @@ function App() {
               stats={mockStats}
               nativeToken={nativeToken}
               baseToken={baseToken}
-              isDarkMode={isDarkMode}
             />
 
             {/* Search & Filters */}
@@ -294,7 +273,6 @@ function App() {
                       index={index}
                       nativeToken={nativeToken}
                       baseToken={baseToken}
-                      isDarkMode={isDarkMode}
                     />
                   ))
                 )}
@@ -307,7 +285,6 @@ function App() {
                 userStats={mockUserStats}
                 nativeToken={nativeToken}
                 baseToken={baseToken}
-                isDarkMode={isDarkMode}
               />
             </div>
           </div>
@@ -318,10 +295,7 @@ function App() {
             {/* Token List - Left Sidebar */}
             <div className="lg:col-span-3">
               <SimpleTokenList
-                tokens={mockTokens}
-                selectedToken={baseToken}
-                onTokenSelect={(token) => console.log('Selected:', token)}
-                isDarkMode={isDarkMode}
+                onFetchData={fetchTokenData}
               />
             </div>
 
@@ -332,7 +306,6 @@ function App() {
                 stats={mockStats}
                 nativeToken={nativeToken}
                 baseToken={baseToken}
-                isDarkMode={isDarkMode}
               />
 
               {/* Search & Filters */}
@@ -396,7 +369,6 @@ function App() {
                         index={index}
                         nativeToken={nativeToken}
                         baseToken={baseToken}
-                        isDarkMode={isDarkMode}
                       />
                     ))
                   )}
@@ -410,7 +382,6 @@ function App() {
                 userStats={mockUserStats}
                 nativeToken={nativeToken}
                 baseToken={baseToken}
-                isDarkMode={isDarkMode}
               />
             </div>
           </div>

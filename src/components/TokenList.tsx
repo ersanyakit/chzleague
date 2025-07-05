@@ -1,79 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Star, TrendingUp, TrendingDown, Filter, BarChart3, ExternalLink } from 'lucide-react';
 import { Token } from '../types/leaderboard';
+import { useTokens, useTheme } from '../contexts/ThemeContext';
 
 interface TokenListProps {
-  tokens: Token[];
-  selectedToken: Token;
-  onTokenSelect: (token: Token) => void;
-  isDarkMode: boolean;
 }
 
-interface TokenListResponse {
-  name: string;
-  timestamp: string;
-  version: {
-    major: number;
-    minor: number;
-    patch: number;
-  };
-  tags: Record<string, any>;
-  logoURI: string;
-  keywords: string[];
-  tokens: Token[];
-}
-
-const TokenList: React.FC<TokenListProps> = ({
-  tokens,
-  selectedToken,
-  onTokenSelect,
-  isDarkMode
-}) => {
+const TokenList: React.FC<TokenListProps> = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'volume' | 'price' | 'change'>('volume');
-  const [fetchedTokens, setFetchedTokens] = useState<Token[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { tokens, selectedToken, loading, error, setSelectedToken } = useTokens();
+  const { isDarkMode } = useTheme();
 
-  // Fetch tokens from GitHub repository
-  useEffect(() => {
-    const fetchTokens = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await fetch('https://raw.githubusercontent.com/kewlexchange/assets/main/chiliz/index.json');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data: TokenListResponse = await response.json();
-        
-        // Add mock price data for demonstration (since the API doesn't include price data)
-        const tokensWithMockData = data.tokens.map(token => ({
-          ...token,
-          price: Math.random() * 0.1 + 0.01, // Random price between 0.01 and 0.11
-          change24h: (Math.random() - 0.5) * 20, // Random change between -10% and +10%
-          volume24h: Math.random() * 2000000 + 100000, // Random volume between 100K and 2.1M
-          marketCap: Math.random() * 100000000 + 1000000 // Random market cap between 1M and 101M
-        }));
-        
-        setFetchedTokens(tokensWithMockData);
-      } catch (err) {
-        console.error('Error fetching tokens:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch tokens');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTokens();
-  }, []);
-
-  const filteredTokens = (fetchedTokens.length > 0 ? fetchedTokens : tokens)
+  const filteredTokens = tokens
     .filter(token => {
       const matchesSearch = token.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            token.symbol.toLowerCase().includes(searchTerm.toLowerCase());
@@ -119,7 +60,7 @@ const TokenList: React.FC<TokenListProps> = ({
     }
     return (
       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-        selectedToken.address === token.address ? 'bg-red-500' : 'bg-gray-500'
+        selectedToken?.address === token.address ? 'bg-red-500' : 'bg-gray-500'
       }`}>
         {token.symbol.charAt(0)}
       </div>
@@ -235,10 +176,12 @@ const TokenList: React.FC<TokenListProps> = ({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
-            onClick={() => onTokenSelect(token)}
+            onClick={() => {
+              setSelectedToken(token);
+            }}
             className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
-              selectedToken.address === token.address
-                ? 'bg-red-500/20 border border-red-500/30'
+              selectedToken?.address === token.address
+                ? 'bg-red-500/20 border-2 border-red-500/50 shadow-lg'
                 : isDarkMode
                   ? 'bg-gray-800/50 hover:bg-gray-800/70 border border-gray-700/30'
                   : 'bg-white/50 hover:bg-white/70 border border-gray-200/30'
@@ -250,10 +193,16 @@ const TokenList: React.FC<TokenListProps> = ({
                   {getTokenLogo(token)}
                   {/* Fallback symbol display */}
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                    selectedToken.address === token.address ? 'bg-red-500' : 'bg-gray-500'
+                    selectedToken?.address === token.address ? 'bg-red-500' : 'bg-gray-500'
                   } hidden`}>
                     {token.symbol.charAt(0)}
                   </div>
+                  {/* Selection indicator */}
+                  {selectedToken?.address === token.address && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                      <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                    </div>
+                  )}
                 </div>
                 
                 <div>
@@ -287,6 +236,15 @@ const TokenList: React.FC<TokenListProps> = ({
                     }`}>
                       {token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(1)}%
                     </span>
+                  </div>
+                )}
+                
+                {/* Selection checkmark */}
+                {selectedToken?.address === token.address && (
+                  <div className="mt-2 flex justify-end">
+                    <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                      <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+                    </div>
                   </div>
                 )}
               </div>

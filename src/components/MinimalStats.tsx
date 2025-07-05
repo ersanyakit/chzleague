@@ -2,20 +2,21 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Activity } from 'lucide-react';
 import { LeaderboardStats, Token } from '../types/leaderboard';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface MinimalStatsProps {
   stats: LeaderboardStats;
   nativeToken: Token;
   baseToken: Token;
-  isDarkMode: boolean;
 }
 
 const MinimalStats: React.FC<MinimalStatsProps> = ({
   stats,
   nativeToken,
-  baseToken,
-  isDarkMode
+  baseToken
 }) => {
+  const { isDarkMode } = useTheme();
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;

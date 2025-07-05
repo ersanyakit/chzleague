@@ -1,77 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
 import { Token } from '../types/leaderboard';
+import { useTokens, useTheme } from '../contexts/ThemeContext';
 
 interface SimpleTokenListProps {
-  tokens: Token[];
-  selectedToken: Token;
-  onTokenSelect: (token: Token) => void;
-  isDarkMode: boolean;
-}
-
-interface TokenListResponse {
-  name: string;
-  timestamp: string;
-  version: {
-    major: number;
-    minor: number;
-    patch: number;
-  };
-  tags: Record<string, any>;
-  logoURI: string;
-  keywords: string[];
-  tokens: Token[];
+  onFetchData?: (token: Token) => void;
 }
 
 const SimpleTokenList: React.FC<SimpleTokenListProps> = ({
-  tokens,
-  selectedToken,
-  onTokenSelect,
-  isDarkMode
+  onFetchData
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [fetchedTokens, setFetchedTokens] = useState<Token[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { tokens, selectedToken, loading, error, setSelectedToken } = useTokens();
+  const { isDarkMode } = useTheme();
 
-  // Fetch tokens from GitHub repository
-  useEffect(() => {
-    const fetchTokens = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await fetch('https://raw.githubusercontent.com/kewlexchange/assets/main/chiliz/index.json');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data: TokenListResponse = await response.json();
-        
-        // Add mock price data for demonstration (since the API doesn't include price data)
-        const tokensWithMockData = data.tokens.map(token => ({
-          ...token,
-          price: Math.random() * 0.1 + 0.01, // Random price between 0.01 and 0.11
-          change24h: (Math.random() - 0.5) * 20, // Random change between -10% and +10%
-          volume24h: Math.random() * 2000000 + 100000, // Random volume between 100K and 2.1M
-          marketCap: Math.random() * 100000000 + 1000000 // Random market cap between 1M and 101M
-        }));
-        
-        setFetchedTokens(tokensWithMockData);
-      } catch (err) {
-        console.error('Error fetching tokens:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch tokens');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTokens();
-  }, []);
-
-  const filteredTokens = (fetchedTokens.length > 0 ? fetchedTokens : tokens).filter(token => 
+  const filteredTokens = tokens.filter(token => 
     token.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     token.symbol.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -83,28 +27,62 @@ const SimpleTokenList: React.FC<SimpleTokenListProps> = ({
   };
 
   const getTokenLogo = (token: Token) => {
+    const isSelected = selectedToken?.address === token.address;
+    
     if (token.logoURI) {
       return (
-        <img 
-          src={token.logoURI} 
-          alt={token.symbol}
-          className="w-8 h-8 rounded-full object-cover"
-          onError={(e) => {
-            // Fallback to symbol if image fails to load
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            target.nextElementSibling?.classList.remove('hidden');
-          }}
-        />
+        <div className="relative">
+          <img 
+            src={token.logoURI} 
+            alt={token.symbol}
+            className="w-8 h-8 rounded-full object-cover"
+            onError={(e) => {
+              // Fallback to symbol if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const fallback = target.parentElement?.querySelector('.logo-fallback') as HTMLElement;
+              if (fallback) fallback.classList.remove('hidden');
+            }}
+          />
+          {/* Fallback symbol display */}
+          <div className={`logo-fallback w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${
+            isSelected ? 'bg-red-500' : 'bg-gray-500'
+          } hidden absolute top-0 left-0`}>
+            {token.symbol.charAt(0)}
+          </div>
+          {/* Selection indicator */}
+          {isSelected && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 flex items-center justify-center shadow-lg z-10">
+              <div className="w-1 h-1 rounded-full bg-white"></div>
+            </div>
+          )}
+        </div>
       );
     }
+    
     return (
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${
-        selectedToken.address === token.address ? 'bg-red-500' : 'bg-gray-500'
-      }`}>
-        {token.symbol.charAt(0)}
+      <div className="relative">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${
+          isSelected ? 'bg-red-500' : 'bg-gray-500'
+        }`}>
+          {token.symbol.charAt(0)}
+        </div>
+        {/* Selection indicator */}
+        {isSelected && (
+          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 flex items-center justify-center shadow-lg z-10">
+            <div className="w-1 h-1 rounded-full bg-white"></div>
+          </div>
+        )}
       </div>
     );
+  };
+
+  // Handle token selection with fetch
+  const handleTokenSelect = (token: Token) => {
+    setSelectedToken(token);
+    if (onFetchData) {
+      onFetchData(token);
+    }
   };
 
   return (
@@ -136,7 +114,7 @@ const SimpleTokenList: React.FC<SimpleTokenListProps> = ({
       </div>
 
       {/* Token List */}
-      <div className="space-y-2 max-h-[calc(50vh-120px)] lg:max-h-[85dvh] overflow-y-auto scrollbar-hide">
+      <div className="space-y-2 max-h-[calc(50vh-120px)] lg:max-h-[85dvh] overflow-y-auto scrollbar-hide px-1">
         {loading && (
           <div className="flex items-center justify-center py-4">
             <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -161,43 +139,63 @@ const SimpleTokenList: React.FC<SimpleTokenListProps> = ({
           </div>
         )}
 
-        {!loading && !error && filteredTokens.map((token, index) => (
-          <motion.div
-            key={token.address}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.05 }}
-            onClick={() => onTokenSelect(token)}
-            className={`p-3 rounded-lg cursor-pointer transition-all ${
-              selectedToken.address === token.address
-                ? 'bg-red-500/20 border border-red-500/30'
-                : isDarkMode
-                  ? 'bg-gray-700/30 hover:bg-gray-700/50'
-                  : 'bg-gray-50/80 hover:bg-gray-100/80'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="relative">
+        {!loading && !error && filteredTokens.map((token, index) => {
+          const isSelected = selectedToken?.address === token.address;
+          
+          return (
+            <motion.div
+              key={token.address}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ 
+                opacity: 1, 
+                x: 0,
+                scale: isSelected ? 1.01 : 1
+              }}
+              transition={{ 
+                delay: index * 0.05,
+                scale: { duration: 0.2 }
+              }}
+              whileHover={{ 
+                scale: isSelected ? 1.01 : 1.02
+              }}
+              whileTap={{ 
+                scale: 0.98
+              }}
+              onClick={() => handleTokenSelect(token)}
+              className={`p-3 rounded-lg cursor-pointer transition-all duration-200 transform ${
+                isSelected
+                  ? isDarkMode 
+                    ? 'bg-red-500/30 border-2 border-red-500/60 shadow-lg shadow-red-500/20'
+                    : 'bg-red-500/20 border-2 border-red-500/50 shadow-lg shadow-red-500/10'
+                  : isDarkMode
+                    ? 'bg-gray-700/30 hover:bg-gray-700/50 hover:shadow-md border border-transparent hover:border-gray-600/30'
+                    : 'bg-gray-50/80 hover:bg-gray-100/90 hover:shadow-md border border-transparent hover:border-gray-300/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
                 {getTokenLogo(token)}
-                {/* Fallback symbol display */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${
-                  selectedToken.address === token.address ? 'bg-red-500' : 'bg-gray-500'
-                } hidden`}>
-                  {token.symbol.charAt(0)}
+                
+                <div className="flex-1">
+                  <div className={`font-semibold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {token.symbol}
+                  </div>
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {token.name}
+                  </div>
                 </div>
+                
+                {/* Selection checkmark for better visibility */}
+                {isSelected && (
+                  <div className="flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                      <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              <div>
-                <div className={`font-semibold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {token.symbol}
-                </div>
-                <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {token.name}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

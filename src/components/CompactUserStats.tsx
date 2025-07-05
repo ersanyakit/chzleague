@@ -2,20 +2,20 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Wallet, Copy, Settings, Trophy, Gift } from 'lucide-react';
 import { UserStats, Token } from '../types/leaderboard';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CompactUserStatsProps {
   userStats: UserStats;
   nativeToken: Token;
   baseToken: Token;
-  isDarkMode: boolean;
 }
 
 const CompactUserStats: React.FC<CompactUserStatsProps> = ({
   userStats,
   nativeToken,
-  baseToken,
-  isDarkMode
+  baseToken
 }) => {
+  const { isDarkMode } = useTheme();
   const [showSettings, setShowSettings] = useState(false);
 
   const formatNumber = (num: number) => {

@@ -2,22 +2,23 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Shield, Copy } from 'lucide-react';
 import { LeaderboardEntry as LeaderboardEntryType, Token } from '../types/leaderboard';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface MinimalLeaderboardEntryProps {
   entry: LeaderboardEntryType;
   index: number;
   nativeToken: Token;
   baseToken: Token;
-  isDarkMode: boolean;
 }
 
 const MinimalLeaderboardEntry: React.FC<MinimalLeaderboardEntryProps> = ({
   entry,
   index,
   nativeToken,
-  baseToken,
-  isDarkMode
+  baseToken
 }) => {
+  const { isDarkMode } = useTheme();
+
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'bg-yellow-500';
     if (rank === 2) return 'bg-gray-400';
