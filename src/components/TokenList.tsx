@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Star, TrendingUp, TrendingDown, Filter, BarChart3 } from 'lucide-react';
+import { Search, Star, TrendingUp, TrendingDown, Filter, BarChart3, ExternalLink } from 'lucide-react';
 import { Token } from '../types/leaderboard';
 
 interface TokenListProps {
@@ -8,6 +8,20 @@ interface TokenListProps {
   selectedToken: Token;
   onTokenSelect: (token: Token) => void;
   isDarkMode: boolean;
+}
+
+interface TokenListResponse {
+  name: string;
+  timestamp: string;
+  version: {
+    major: number;
+    minor: number;
+    patch: number;
+  };
+  tags: Record<string, any>;
+  logoURI: string;
+  keywords: string[];
+  tokens: Token[];
 }
 
 const TokenList: React.FC<TokenListProps> = ({
@@ -19,8 +33,47 @@ const TokenList: React.FC<TokenListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'volume' | 'price' | 'change'>('volume');
+  const [fetchedTokens, setFetchedTokens] = useState<Token[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredTokens = tokens
+  // Fetch tokens from GitHub repository
+  useEffect(() => {
+    const fetchTokens = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('https://raw.githubusercontent.com/kewlexchange/assets/main/chiliz/index.json');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data: TokenListResponse = await response.json();
+        
+        // Add mock price data for demonstration (since the API doesn't include price data)
+        const tokensWithMockData = data.tokens.map(token => ({
+          ...token,
+          price: Math.random() * 0.1 + 0.01, // Random price between 0.01 and 0.11
+          change24h: (Math.random() - 0.5) * 20, // Random change between -10% and +10%
+          volume24h: Math.random() * 2000000 + 100000, // Random volume between 100K and 2.1M
+          marketCap: Math.random() * 100000000 + 1000000 // Random market cap between 1M and 101M
+        }));
+        
+        setFetchedTokens(tokensWithMockData);
+      } catch (err) {
+        console.error('Error fetching tokens:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch tokens');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTokens();
+  }, []);
+
+  const filteredTokens = (fetchedTokens.length > 0 ? fetchedTokens : tokens)
     .filter(token => {
       const matchesSearch = token.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            token.symbol.toLowerCase().includes(searchTerm.toLowerCase());
@@ -48,17 +101,42 @@ const TokenList: React.FC<TokenListProps> = ({
     return num.toFixed(2);
   };
 
+  const getTokenLogo = (token: Token) => {
+    if (token.logoURI) {
+      return (
+        <img 
+          src={token.logoURI} 
+          alt={token.symbol}
+          className="w-10 h-10 rounded-full object-cover"
+          onError={(e) => {
+            // Fallback to symbol if image fails to load
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            target.nextElementSibling?.classList.remove('hidden');
+          }}
+        />
+      );
+    }
+    return (
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+        selectedToken.address === token.address ? 'bg-red-500' : 'bg-gray-500'
+      }`}>
+        {token.symbol.charAt(0)}
+      </div>
+    );
+  };
+
   return (
     <div className={`${isDarkMode ? 'bg-gray-900/40' : 'bg-white/60'} backdrop-blur-xl p-6 rounded-2xl border ${isDarkMode ? 'border-gray-700/30' : 'border-white/40'}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-green-500/20' : 'bg-green-50'}`}>
-            <BarChart3 className={`w-5 h-5 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+          <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-red-500/20' : 'bg-red-50'}`}>
+            <BarChart3 className={`w-5 h-5 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
           </div>
           <div>
             <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Trading Pairs
+              Chiliz Tokens
             </h3>
             <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Select trading pair
@@ -98,7 +176,7 @@ const TokenList: React.FC<TokenListProps> = ({
             isDarkMode 
               ? 'bg-gray-800/50 border-gray-700/50 text-gray-300 placeholder-gray-400' 
               : 'bg-white/80 border-gray-200 text-gray-700 placeholder-gray-500'
-          } focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all backdrop-blur-sm`}
+          } focus:outline-none focus:ring-2 focus:ring-red-500/40 transition-all backdrop-blur-sm`}
         />
       </div>
 
@@ -114,7 +192,7 @@ const TokenList: React.FC<TokenListProps> = ({
             onClick={() => setSortBy(option.key as any)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               sortBy === option.key
-                ? 'bg-blue-500 text-white'
+                ? 'bg-red-500 text-white'
                 : isDarkMode
                   ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -127,7 +205,31 @@ const TokenList: React.FC<TokenListProps> = ({
 
       {/* Token List */}
       <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-hide">
-        {filteredTokens.map((token, index) => (
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Loading tokens...
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center justify-center py-8">
+            <div className={`text-sm text-red-500`}>
+              Error: {error}
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && filteredTokens.length === 0 && (
+          <div className="flex items-center justify-center py-8">
+            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              No tokens found
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && filteredTokens.map((token, index) => (
           <motion.div
             key={token.address}
             initial={{ opacity: 0, x: -20 }}
@@ -136,7 +238,7 @@ const TokenList: React.FC<TokenListProps> = ({
             onClick={() => onTokenSelect(token)}
             className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
               selectedToken.address === token.address
-                ? 'bg-blue-500/20 border border-blue-500/30'
+                ? 'bg-red-500/20 border border-red-500/30'
                 : isDarkMode
                   ? 'bg-gray-800/50 hover:bg-gray-800/70 border border-gray-700/30'
                   : 'bg-white/50 hover:bg-white/70 border border-gray-200/30'
@@ -144,10 +246,14 @@ const TokenList: React.FC<TokenListProps> = ({
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                  selectedToken.address === token.address ? 'bg-blue-500' : 'bg-gradient-to-br from-gray-400 to-gray-600'
-                }`}>
-                  {token.symbol.charAt(0)}
+                <div className="relative">
+                  {getTokenLogo(token)}
+                  {/* Fallback symbol display */}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                    selectedToken.address === token.address ? 'bg-red-500' : 'bg-gray-500'
+                  } hidden`}>
+                    {token.symbol.charAt(0)}
+                  </div>
                 </div>
                 
                 <div>
@@ -156,6 +262,9 @@ const TokenList: React.FC<TokenListProps> = ({
                   </div>
                   <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     {token.name}
+                  </div>
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Chain ID: {token.chainId}
                   </div>
                 </div>
               </div>
@@ -195,6 +304,21 @@ const TokenList: React.FC<TokenListProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Token Address */}
+            <div className="mt-2 pt-2 border-t border-gray-200/10">
+              <div className="flex items-center justify-between">
+                <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Address
+                </span>
+                <div className="flex items-center gap-1">
+                  <span className={`text-xs font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {token.address.slice(0, 6)}...{token.address.slice(-4)}
+                  </span>
+                  <ExternalLink className="w-3 h-3 text-gray-400" />
+                </div>
+              </div>
+            </div>
           </motion.div>
         ))}
       </div>

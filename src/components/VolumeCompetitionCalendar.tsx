@@ -1,6 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Calendar, Trophy, TrendingUp, BarChart3 } from 'lucide-react';
+import { 
+  ChevronLeft, ChevronRight, Trophy, TrendingUp, BarChart3, 
+  Users, Award, Calendar, Clock, Target, TrendingDown, Activity,
+  ChevronUp, ChevronDown, Star, Crown, Medal,
+  Sun,
+  Moon
+} from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface VolumeCompetitionCalendarProps {
   selectedDate: Date;
@@ -10,40 +17,46 @@ interface VolumeCompetitionCalendarProps {
 
 type CompetitionPeriod = 'daily' | 'weekly' | 'monthly';
 
+interface CompetitionData {
+  date: Date;
+  volume: number;
+  change: number;
+  rank: number;
+  participants: number;
+  prizePool: number;
+  isActive: boolean;
+  isCurrent: boolean;
+}
+
 const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
   selectedDate,
   onDateSelect,
   isDarkMode
 }) => {
+  const { toggleTheme } = useTheme();
   const [competitionPeriod, setCompetitionPeriod] = useState<CompetitionPeriod>('daily');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isCollapsed, setIsCollapsed] = useState(false);
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Mock volume data for demonstration
-  const getVolumeData = (date: Date) => {
-    const baseVolume = Math.random() * 1000000;
+  // Generate competition data
+  const generateCompetitionData = (date: Date, period: CompetitionPeriod): Omit<CompetitionData, 'date'> => {
+    const baseVolume = Math.random() * 2000000 + 800000;
+    const multiplier = period === 'daily' ? 1 : 
+                      period === 'weekly' ? 7 : 30;
+    
     return {
-      volume: baseVolume,
-      change: (Math.random() - 0.5) * 40,
-      rank: Math.floor(Math.random() * 10) + 1
+      volume: baseVolume * multiplier,
+      change: (Math.random() - 0.5) * 35,
+      rank: Math.floor(Math.random() * 15) + 1,
+      participants: Math.floor(Math.random() * 250) + 150,
+      prizePool: Math.floor(Math.random() * 40000) + 8000,
+      isActive: date <= today,
+      isCurrent: date.getTime() === today.getTime()
     };
   };
-
-  // Auto-scroll to end on mount
-  useEffect(() => {
-    if (scrollRef.current && competitionPeriod === 'daily') {
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTo({ 
-            left: scrollRef.current.scrollWidth, 
-            behavior: 'smooth' 
-          });
-        }
-      }, 100);
-    }
-  }, [competitionPeriod]);
 
   const isSelected = (date: Date) => {
     return date.getTime() === selectedDate.getTime();
@@ -53,417 +66,778 @@ const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
     return date.getTime() === today.getTime();
   };
 
-  // Scroll functions for daily view
-  const scrollLeft = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
-    }
+  // Calendar navigation
+  const goToPreviousMonth = () => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      newMonth.setMonth(prev.getMonth() - 1);
+      return newMonth;
+    });
   };
 
-  const scrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
-    }
+  const goToNextMonth = () => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      newMonth.setMonth(prev.getMonth() + 1);
+      return newMonth;
+    });
   };
 
-  // Daily Competition - Last 30 days
-  const getDailyCompetition = () => {
+  // Get calendar days for current month
+  const getCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(firstDay.getDate() - firstDay.getDay());
+    
     const days = [];
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
-      days.push({
-        date,
-        ...getVolumeData(date)
-      });
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= lastDay || currentDate.getDay() !== 0) {
+      days.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
     }
+    
     return days;
   };
 
-  // Weekly Competition - Last 12 weeks
-  const getWeeklyCompetition = () => {
+  // Get weekly data
+  const getWeeklyData = () => {
     const weeks = [];
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - (i * 7));
-      const startOfWeek = new Date(date);
-      startOfWeek.setDate(date.getDate() - date.getDay());
-      weeks.push({
-        date: startOfWeek,
-        ...getVolumeData(startOfWeek)
-      });
+    const currentDate = new Date(currentMonth);
+    currentDate.setDate(1);
+    
+    // Go back to start of first week
+    while (currentDate.getDay() !== 0) {
+      currentDate.setDate(currentDate.getDate() - 1);
     }
+    
+    for (let i = 0; i < 6; i++) {
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() + (i * 7));
+      weeks.push(weekStart);
+    }
+    
     return weeks;
   };
 
-  // Monthly Competition - Last 6 months
-  const getMonthlyCompetition = () => {
+  // Get monthly data
+  const getMonthlyData = () => {
     const months = [];
     for (let i = 5; i >= 0; i--) {
-      const date = new Date();
+      const date = new Date(currentMonth);
       date.setMonth(date.getMonth() - i);
       date.setDate(1);
-      months.push({
-        date,
-        ...getVolumeData(date)
-      });
+      months.push(date);
     }
     return months;
   };
 
+  // Utility functions
   const formatVolume = (volume: number) => {
+    if (volume >= 1000000000) return `${(volume / 1000000000).toFixed(1)}B`;
     if (volume >= 1000000) return `${(volume / 1000000).toFixed(1)}M`;
     if (volume >= 1000) return `${(volume / 1000).toFixed(0)}K`;
     return volume.toFixed(0);
   };
 
-  const getRankColor = (rank: number) => {
-    if (rank === 1) return 'text-yellow-500';
-    if (rank <= 3) return 'text-orange-500';
-    if (rank <= 5) return isDarkMode ? 'text-red-400' : 'text-red-600';
-    return isDarkMode ? 'text-gray-400' : 'text-gray-500';
+  const formatPrizePool = (prize: number) => {
+    if (prize >= 1000000) return `$${(prize / 1000000).toFixed(1)}M`;
+    if (prize >= 1000) return `$${(prize / 1000).toFixed(0)}K`;
+    return `$${prize.toFixed(0)}`;
   };
 
-  const renderDailyCompetition = () => {
-    const days = getDailyCompetition();
-    return (
-      <div className="relative">
-        {/* Left Arrow */}
-        <button
-          onClick={scrollLeft}
-          className={`absolute left-0 top-1/2 transform -translate-y-1/2 z-10 p-2 rounded-full shadow-lg transition-all ${
-            isDarkMode
-              ? 'bg-gray-800/90 text-gray-300 hover:bg-gray-700/90 border border-gray-600/50'
-              : 'bg-white/90 text-gray-600 hover:bg-white border border-gray-300/60'
-          } backdrop-blur-sm hover:scale-110`}
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
-        {/* Right Arrow */}
-        <button
-          onClick={scrollRight}
-          className={`absolute right-0 top-1/2 transform -translate-y-1/2 z-10 p-2 rounded-full shadow-lg transition-all ${
-            isDarkMode
-              ? 'bg-gray-800/90 text-gray-300 hover:bg-gray-700/90 border border-gray-600/50'
-              : 'bg-white/90 text-gray-600 hover:bg-white border border-gray-300/60'
-          } backdrop-blur-sm hover:scale-110`}
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-
-        {/* Scrollable Content */}
-        <div 
-          ref={scrollRef} 
-          className="flex gap-2 overflow-x-auto py-2 px-8 scrollbar-hide"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {days.map((day, index) => {
-            const dayNum = day.date.getDate().toString();
-            const weekDay = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][day.date.getDay()];
-            
-            return (
-              <motion.button
-                key={index}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`flex flex-col items-center justify-center min-w-[70px] h-20 rounded-xl transition-all duration-200 border-2 ${
-                  isSelected(day.date)
-                    ? 'bg-red-500 text-white shadow-lg border-red-400'
-                    : isToday(day.date)
-                      ? isDarkMode
-                        ? 'bg-red-500/20 text-red-400 border-red-500/50'
-                        : 'bg-red-50 text-red-600 border-red-300'
-                      : isDarkMode
-                        ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-700/50'
-                        : 'bg-white/90 text-gray-700 hover:bg-gray-50 border-gray-300/60'
-                } backdrop-blur-sm relative`}
-                onClick={() => onDateSelect(day.date)}
-              >
-                {/* Rank Badge */}
-                <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                  day.rank === 1 ? 'bg-yellow-500 text-white' :
-                  day.rank <= 3 ? 'bg-orange-500 text-white' :
-                  day.rank <= 5 ? 'bg-red-500 text-white' :
-                  'bg-gray-500 text-white'
-                }`}>
-                  {day.rank}
-                </div>
-
-                <span className={`text-xs font-medium ${
-                  isSelected(day.date) ? 'text-white/80' : isToday(day.date) ? '' : isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                }`}>
-                  {weekDay}
-                </span>
-                <span className="text-lg font-bold">{dayNum}</span>
-                <span className={`text-xs font-medium ${getRankColor(day.rank)}`}>
-                  ${formatVolume(day.volume)}
-                </span>
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
-    );
+  const getRankStyle = (rank: number) => {
+    if (rank === 1) {
+      return {
+        bgColor: 'bg-yellow-500',
+        textColor: 'text-yellow-600',
+        borderColor: 'border-yellow-300',
+        icon: <Crown className="w-3 h-3 text-yellow-600" />
+      };
+    }
+    if (rank <= 3) {
+      return {
+        bgColor: 'bg-orange-500',
+        textColor: 'text-orange-600',
+        borderColor: 'border-orange-300',
+        icon: <Medal className="w-3 h-3 text-orange-600" />
+      };
+    }
+    if (rank <= 5) {
+      return {
+        bgColor: 'bg-red-500',
+        textColor: 'text-red-600',
+        borderColor: 'border-red-300',
+        icon: <Star className="w-3 h-3 text-red-600" />
+      };
+    }
+    if (rank <= 10) {
+      return {
+        bgColor: 'bg-red-500',
+        textColor: 'text-red-600',
+        borderColor: 'border-red-300',
+        icon: <Trophy className="w-3 h-3 text-red-600" />
+      };
+    }
+    return {
+      bgColor: 'bg-gray-500',
+      textColor: 'text-gray-600',
+      borderColor: 'border-gray-300',
+      icon: <BarChart3 className="w-3 h-3 text-gray-600" />
+    };
   };
 
-  const renderWeeklyCompetition = () => {
-    const weeks = getWeeklyCompetition();
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {weeks.map((week, index) => {
-          const weekEnd = new Date(week.date);
-          weekEnd.setDate(week.date.getDate() + 6);
-          const isSelectedWeek = selectedDate >= week.date && selectedDate <= weekEnd;
-          const isCurrentWeek = today >= week.date && today <= weekEnd;
-          
-          return (
-            <motion.button
-              key={index}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`p-4 rounded-xl transition-all relative border ${
-                isSelectedWeek
-                  ? 'bg-red-500 text-white shadow-lg border-red-400'
-                  : isCurrentWeek
-                    ? isDarkMode
-                      ? 'bg-red-500/20 text-red-400 border-red-500/50'
-                      : 'bg-red-50 text-red-600 border-red-300'
-                    : isDarkMode
-                      ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-700/30'
-                      : 'bg-white/90 text-gray-700 hover:bg-gray-50 border-gray-300/60'
-              } backdrop-blur-sm`}
-              onClick={() => onDateSelect(week.date)}
-            >
-              {/* Rank Badge */}
-              <div className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                week.rank === 1 ? 'bg-yellow-500 text-white' :
-                week.rank <= 3 ? 'bg-orange-500 text-white' :
-                week.rank <= 5 ? 'bg-red-500 text-white' :
-                'bg-gray-500 text-white'
-              }`}>
-                {week.rank}
-              </div>
-
-              <div className="text-xs font-medium mb-1">Week</div>
-              <div className="text-sm font-bold mb-1">
-                {week.date.getDate()}-{weekEnd.getDate()}
-              </div>
-              <div className="text-xs mb-2">
-                {week.date.toLocaleDateString('en', { month: 'short' })}
-              </div>
-              <div className={`text-xs font-bold ${getRankColor(week.rank)}`}>
-                ${formatVolume(week.volume)}
-              </div>
-            </motion.button>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderMonthlyCompetition = () => {
-    const months = getMonthlyCompetition();
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {months.map((month, index) => {
-          const isSelectedMonth = selectedDate.getMonth() === month.date.getMonth() && 
-                                 selectedDate.getFullYear() === month.date.getFullYear();
-          const isCurrentMonth = today.getMonth() === month.date.getMonth() && 
-                                today.getFullYear() === month.date.getFullYear();
-          
-          return (
-            <motion.button
-              key={index}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`p-6 rounded-xl transition-all relative border ${
-                isSelectedMonth
-                  ? 'bg-red-500 text-white shadow-lg border-red-400'
-                  : isCurrentMonth
-                    ? isDarkMode
-                      ? 'bg-red-500/20 text-red-400 border-red-500/50'
-                      : 'bg-red-50 text-red-600 border-red-300'
-                    : isDarkMode
-                      ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-700/30'
-                      : 'bg-white/90 text-gray-700 hover:bg-gray-50 border-gray-300/60'
-              } backdrop-blur-sm`}
-              onClick={() => onDateSelect(month.date)}
-            >
-              {/* Rank Badge */}
-              <div className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                month.rank === 1 ? 'bg-yellow-500 text-white' :
-                month.rank <= 3 ? 'bg-orange-500 text-white' :
-                month.rank <= 5 ? 'bg-red-500 text-white' :
-                'bg-gray-500 text-white'
-              }`}>
-                {month.rank}
-              </div>
-
-              <div className="text-xl font-bold mb-2">
-                {month.date.toLocaleDateString('en', { month: 'short' })}
-              </div>
-              <div className="text-sm mb-3">
-                {month.date.getFullYear()}
-              </div>
-              <div className={`text-sm font-bold ${getRankColor(month.rank)}`}>
-                ${formatVolume(month.volume)}
-              </div>
-              <div className={`text-xs mt-1 flex items-center justify-center gap-1 ${
-                month.change >= 0 ? 'text-green-500' : 'text-red-500'
-              }`}>
-                <TrendingUp className={`w-3 h-3 ${month.change < 0 ? 'rotate-180' : ''}`} />
-                {month.change >= 0 ? '+' : ''}{month.change.toFixed(1)}%
-              </div>
-            </motion.button>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const getCompetitionTitle = () => {
+  const getPeriodInfo = () => {
     switch (competitionPeriod) {
-      case 'daily':
-        return 'Daily Volume Competition';
-      case 'weekly':
-        return 'Weekly Volume Competition';
-      case 'monthly':
-        return 'Monthly Volume Competition';
+      case 'daily': return { label: 'Daily', description: 'Monthly Calendar View' };
+      case 'weekly': return { label: 'Weekly', description: 'Weekly Overview' };
+      case 'monthly': return { label: 'Monthly', description: 'Monthly Overview' };
     }
   };
 
-  const getCompetitionSubtitle = () => {
-    switch (competitionPeriod) {
-      case 'daily':
-        return 'Last 30 days • Rank by daily volume';
-      case 'weekly':
-        return 'Last 12 weeks • Rank by weekly volume';
-      case 'monthly':
-        return 'Last 6 months • Rank by monthly volume';
-    }
-  };
-
-  return (
-    <div className={`${
-      isDarkMode ? 'bg-gray-900/40' : 'bg-white/60'
-    } backdrop-blur-xl p-6 rounded-xl border ${
-      isDarkMode ? 'border-gray-700/30' : 'border-white/40'
-    } mb-6`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-red-500/20' : 'bg-red-50'}`}>
-            <Trophy className={`w-6 h-6 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
-          </div>
-          <div>
-            <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              {getCompetitionTitle()}
-            </h3>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {getCompetitionSubtitle()}
-            </p>
-          </div>
-        </div>
-
-        <div className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-600'}`}>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            <span className="text-sm font-medium">Live Rankings</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Competition Period Selector */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl bg-gray-500/10">
-        {(['daily', 'weekly', 'monthly'] as CompetitionPeriod[]).map((period) => (
-          <button
-            key={period}
-            onClick={() => setCompetitionPeriod(period)}
-            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
-              competitionPeriod === period
-                ? 'bg-red-500 text-white shadow-lg'
+  // Render calendar day
+  const renderCalendarDay = (date: Date, isCurrentMonth: boolean) => {
+    const isSelectedDay = isSelected(date);
+    const isTodayDate = isToday(date);
+    const isPast = date <= today;
+    
+    // Generate competition data for this day
+    const competitionData = generateCompetitionData(date, 'daily');
+    const rankStyle = getRankStyle(competitionData.rank);
+    
+    return (
+      <motion.button
+        key={date.toISOString()}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className={`relative p-3 rounded-lg transition-all duration-200 border ${
+          isSelectedDay
+            ? 'bg-red-500 text-white shadow-sm border-red-400'
+            : isTodayDate
+              ? isDarkMode
+                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                : 'bg-red-50 text-red-600 border-red-300'
+              : isCurrentMonth
+                ? isDarkMode
+                  ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-600/30'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
                 : isDarkMode
-                  ? 'text-gray-300 hover:bg-gray-700/50'
-                  : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            {period.charAt(0).toUpperCase() + period.slice(1)} Competition
-          </button>
-        ))}
-      </div>
-
-      {/* Competition Calendar */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={competitionPeriod}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-        >
-          {competitionPeriod === 'daily' && renderDailyCompetition()}
-          {competitionPeriod === 'weekly' && renderWeeklyCompetition()}
-          {competitionPeriod === 'monthly' && renderMonthlyCompetition()}
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Competition Info */}
-      <div className={`mt-6 p-4 rounded-xl ${
-        isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50/80'
-      } border ${isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'}`}>
+                  ? 'bg-gray-900/30 text-gray-500 border-gray-700/30'
+                  : 'bg-gray-50 text-gray-400 border-gray-200'
+        } shadow-sm hover:shadow-sm h-28 flex flex-col justify-between`}
+        onClick={() => onDateSelect(date)}
+        disabled={!isCurrentMonth}
+      >
+        {/* Day Number and Active Indicator */}
         <div className="flex items-center justify-between">
-          <div>
-            <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Selected Period
+          <span className={`text-sm font-bold ${
+            isSelectedDay ? 'text-white' : 
+            isTodayDate ? 'text-red-600' : 
+            isCurrentMonth ? 'text-gray-700' : 'text-gray-400'
+          }`}>
+            {date.getDate()}
+          </span>
+          {isPast && (
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+          )}
+        </div>
+
+        {/* Competition Data */}
+        {isCurrentMonth && (
+          <div className="space-y-1">
+            <div className={`text-xs font-bold ${
+              isSelectedDay ? 'text-white' : rankStyle.textColor
+            }`}>
+              ${formatVolume(competitionData.volume)}
             </div>
-            <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              {selectedDate.toLocaleDateString('en', { 
-                weekday: 'short',
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-              })}
-            </div>
-          </div>
-          
-          <div className="text-right">
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              Your Rank
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
-                <span className="text-xs font-bold text-white">1</span>
-              </div>
-              <span className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                #1
+            <div className="flex items-center justify-center gap-1">
+              {competitionData.change >= 0 ? (
+                <TrendingUp className="w-3 h-3 text-green-500" />
+              ) : (
+                <TrendingDown className="w-3 h-3 text-red-500" />
+              )}
+              <span className={`text-xs font-medium ${
+                competitionData.change >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {competitionData.change >= 0 ? '+' : ''}{competitionData.change.toFixed(1)}%
               </span>
             </div>
+            <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded ${
+              isSelectedDay ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+            }`}>
+              {rankStyle.icon}
+              <span className="text-xs font-bold">#{competitionData.rank}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Selection Indicator */}
+        {isSelectedDay && (
+          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+          </div>
+        )}
+      </motion.button>
+    );
+  };
+
+  // Render weekly card
+  const renderWeeklyCard = (weekStart: Date, index: number) => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const isSelectedWeek = selectedDate >= weekStart && selectedDate <= weekEnd;
+    const isCurrentWeek = today >= weekStart && today <= weekEnd;
+    const isPast = weekStart <= today;
+    
+    const competitionData = generateCompetitionData(weekStart, 'weekly');
+    const rankStyle = getRankStyle(competitionData.rank);
+    
+    return (
+      <motion.button
+        key={weekStart.toISOString()}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className={`relative p-4 rounded-lg transition-all duration-200 border ${
+          isSelectedWeek
+            ? 'bg-red-500 text-white shadow-sm border-red-400'
+            : isCurrentWeek
+              ? isDarkMode
+                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                : 'bg-red-50 text-red-600 border-red-300'
+              : isDarkMode
+                ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-600/30'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+        } shadow-sm hover:shadow-sm h-32 flex flex-col justify-between`}
+        onClick={() => onDateSelect(weekStart)}
+      >
+        {/* Week Header */}
+        <div className="flex items-center justify-between">
+          <div className="text-center">
+            <div className={`text-sm font-bold ${
+              isSelectedWeek ? 'text-white' : rankStyle.textColor
+            }`}>
+              Week {index + 1}
+            </div>
+            <div className={`text-xs ${
+              isSelectedWeek ? 'text-white/70' : 'text-gray-500'
+            }`}>
+              {weekStart.getDate()}-{weekEnd.getDate()} {weekStart.toLocaleDateString('en', { month: 'short' })}
+            </div>
+          </div>
+          {isPast && (
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+          )}
+        </div>
+
+        {/* Competition Data */}
+        <div className="space-y-2">
+          <div className={`text-sm font-bold ${
+            isSelectedWeek ? 'text-white' : rankStyle.textColor
+          }`}>
+            ${formatVolume(competitionData.volume)}
+          </div>
+          <div className="flex items-center justify-center gap-1">
+            {competitionData.change >= 0 ? (
+              <TrendingUp className="w-4 h-4 text-green-500" />
+            ) : (
+              <TrendingDown className="w-4 h-4 text-red-500" />
+            )}
+            <span className={`text-xs font-medium ${
+              competitionData.change >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {competitionData.change >= 0 ? '+' : ''}{competitionData.change.toFixed(1)}%
+            </span>
+          </div>
+          <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded ${
+            isSelectedWeek ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+          }`}>
+            {rankStyle.icon}
+            <span className="text-xs font-bold">#{competitionData.rank}</span>
           </div>
         </div>
-      </div>
 
-      {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-6">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
-          <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>1st Place</span>
+        {/* Selection Indicator */}
+        {isSelectedWeek && (
+          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+          </div>
+        )}
+      </motion.button>
+    );
+  };
+
+  // Render monthly card
+  const renderMonthlyCard = (monthStart: Date, index: number) => {
+    const isSelectedMonth = selectedDate.getMonth() === monthStart.getMonth() && selectedDate.getFullYear() === monthStart.getFullYear();
+    const isCurrentMonth = today.getMonth() === monthStart.getMonth() && today.getFullYear() === monthStart.getFullYear();
+    const isPast = monthStart <= today;
+    
+    const competitionData = generateCompetitionData(monthStart, 'monthly');
+    const rankStyle = getRankStyle(competitionData.rank);
+    
+    return (
+      <motion.button
+        key={monthStart.toISOString()}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className={`relative p-4 rounded-lg transition-all duration-200 border ${
+          isSelectedMonth
+            ? 'bg-red-500 text-white shadow-sm border-red-400'
+            : isCurrentMonth
+              ? isDarkMode
+                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                : 'bg-red-50 text-red-600 border-red-300'
+              : isDarkMode
+                ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border-gray-600/30'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+        } shadow-sm hover:shadow-sm h-32 flex flex-col justify-between`}
+        onClick={() => onDateSelect(monthStart)}
+      >
+        {/* Month Header */}
+        <div className="flex items-center justify-between">
+          <div className="text-center">
+            <div className={`text-sm font-bold ${
+              isSelectedMonth ? 'text-white' : rankStyle.textColor
+            }`}>
+              {monthStart.toLocaleDateString('en', { month: 'long' })}
+            </div>
+            <div className={`text-xs ${
+              isSelectedMonth ? 'text-white/70' : 'text-gray-500'
+            }`}>
+              {monthStart.getFullYear()}
+            </div>
+          </div>
+          {isPast && (
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-orange-500"></div>
-          <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Top 3</span>
+
+        {/* Competition Data */}
+        <div className="space-y-2">
+          <div className={`text-sm font-bold ${
+            isSelectedMonth ? 'text-white' : rankStyle.textColor
+          }`}>
+            ${formatVolume(competitionData.volume)}
+          </div>
+          <div className="flex items-center justify-center gap-1">
+            {competitionData.change >= 0 ? (
+              <TrendingUp className="w-4 h-4 text-green-500" />
+            ) : (
+              <TrendingDown className="w-4 h-4 text-red-500" />
+            )}
+            <span className={`text-xs font-medium ${
+              competitionData.change >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {competitionData.change >= 0 ? '+' : ''}{competitionData.change.toFixed(1)}%
+            </span>
+          </div>
+          <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded ${
+            isSelectedMonth ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+          }`}>
+            {rankStyle.icon}
+            <span className="text-xs font-bold">#{competitionData.rank}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-red-500"></div>
-          <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Top 5</span>
+
+        {/* Selection Indicator */}
+        {isSelectedMonth && (
+          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+          </div>
+        )}
+      </motion.button>
+    );
+  };
+
+  // Render calendar view
+  const renderCalendarView = () => {
+    if (competitionPeriod === 'daily') {
+      const days = getCalendarDays();
+      const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      
+      return (
+        <div className="space-y-4">
+          {/* Week Days Header */}
+          <div className="grid grid-cols-7 gap-3">
+            {weekDays.map(day => (
+              <div key={day} className={`text-center py-3 text-sm font-bold ${
+                isDarkMode ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-3">
+            {days.map(date => {
+              const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+              return renderCalendarDay(date, isCurrentMonth);
+            })}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-gray-500"></div>
-          <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Others</span>
+      );
+    }
+
+    if (competitionPeriod === 'weekly') {
+      const weeks = getWeeklyData();
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {weeks.map((weekStart, index) => renderWeeklyCard(weekStart, index))}
         </div>
+      );
+    }
+
+    if (competitionPeriod === 'monthly') {
+      const months = getMonthlyData();
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {months.map((monthStart, index) => renderMonthlyCard(monthStart, index))}
+        </div>
+      );
+    }
+  };
+
+  const selectedData = generateCompetitionData(selectedDate, competitionPeriod);
+  const periodInfo = getPeriodInfo();
+
+  return (
+    <motion.div 
+      initial={false}
+      animate={{ height: isCollapsed ? 'auto' : 'auto' }}
+      className={`mb-6 shadow-sm overflow-hidden  border-b border-white/10`}
+    >
+      {/* Collapsible Header */}
+      <div className={`p-6 ${isCollapsed ? 'pb-4' : ''}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-red-500/20' : 'bg-red-50'}`}>
+              <Calendar className={`w-6 h-6 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
+            </div>
+            <div>
+              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Volume Competition Calendar
+              </h3>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Advanced trading competition tracking
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Status Display - Always Visible */}
+            <div className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <div className="flex items-center gap-3">
+                <div className={`px-2 py-1 rounded text-xs font-medium ${
+                  competitionPeriod === 'daily' ? 'bg-red-500/20 text-red-600' :
+                  competitionPeriod === 'weekly' ? 'bg-red-500/20 text-red-600' :
+                  'bg-red-500/20 text-red-600'
+                }`}>
+                  {competitionPeriod.charAt(0).toUpperCase() + competitionPeriod.slice(1)}
+                </div>
+                <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {competitionPeriod === 'daily' && selectedDate.toLocaleDateString('en', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                  {competitionPeriod === 'weekly' && `Week ${Math.ceil(selectedDate.getDate() / 7)} ${selectedDate.toLocaleDateString('en', { 
+                    month: 'short',
+                    year: 'numeric'
+                  })}`}
+                  {competitionPeriod === 'monthly' && selectedDate.toLocaleDateString('en', { 
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+            </div>
+
+            {/* Compact Stats - Always Visible */}
+            <div className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Volume</div>
+                  <div className={`text-sm font-bold ${getRankStyle(selectedData.rank).textColor}`}>
+                    ${formatVolume(selectedData.volume)}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Performance</div>
+                  <div className={`text-sm font-bold ${selectedData.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {selectedData.change >= 0 ? '+' : ''}{selectedData.change.toFixed(1)}%
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Rank</div>
+                  <div className="flex items-center gap-1 justify-center">
+                    <div className={`w-5 h-5 rounded-full ${getRankStyle(selectedData.rank).bgColor} flex items-center justify-center`}>
+                      <span className="text-xs font-bold text-white">{selectedData.rank}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Participants</div>
+                  <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {selectedData.participants}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Prize Pool</div>
+                  <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {formatPrizePool(selectedData.prizePool)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-green-500/20' : 'bg-green-50'}`}>
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4" />
+                <span className="text-sm font-medium">Live Competition</span>
+              </div>
+            </div>
+
+            {/* Collapse Button */}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className={`p-2 rounded-lg transition-all ${
+                isDarkMode
+                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
+              } hover:scale-105`}
+            >
+              {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={() => {
+                toggleTheme();
+              }}
+              className={`p-2 rounded-xl transition-all ${
+                isDarkMode 
+                  ? 'bg-gray-800/50 text-yellow-400 hover:bg-gray-800' 
+                  : 'bg-white/50 text-gray-600 hover:bg-white/70'
+              } backdrop-blur-sm`}
+            >
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {!isCollapsed && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Period Selector */}
+              <div className={`flex gap-1 mb-6 p-1 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                {(['daily', 'weekly', 'monthly'] as CompetitionPeriod[]).map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setCompetitionPeriod(period)}
+                    className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                      competitionPeriod === period
+                        ? 'bg-red-500 text-white'
+                        : isDarkMode
+                          ? 'text-gray-300 hover:bg-gray-700'
+                          : 'text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {period.charAt(0).toUpperCase() + period.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              {/* Month Navigation (for daily view) */}
+              {competitionPeriod === 'daily' && (
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    onClick={goToPreviousMonth}
+                    className={`p-2 rounded-lg transition-all ${
+                      isDarkMode
+                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
+                    } hover:scale-105`}
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+
+                  <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {currentMonth.toLocaleDateString('en', { month: 'long', year: 'numeric' })}
+                  </h2>
+
+                  <button
+                    onClick={goToNextMonth}
+                    className={`p-2 rounded-lg transition-all ${
+                      isDarkMode
+                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
+                    } hover:scale-105`}
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Period Info */}
+              <div className={`flex items-center justify-between mb-6 p-3 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <Calendar className={`w-4 h-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                  </div>
+                  <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                    {periodInfo?.label} Competition
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className={`w-4 h-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {periodInfo?.description}
+                  </span>
+                </div>
+              </div>
+
+              {/* Calendar */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={competitionPeriod === 'daily' ? `${currentMonth.getFullYear()}-${currentMonth.getMonth()}` : competitionPeriod}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {renderCalendarView()}
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Selected Period Info */}
+              {selectedData && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`mt-6 p-4 rounded-lg ${
+                    isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                  } border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Selected {competitionPeriod === 'daily' ? 'Date' : competitionPeriod === 'weekly' ? 'Week' : 'Month'}
+                      </div>
+                      <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {selectedDate.toLocaleDateString('en', { 
+                          weekday: competitionPeriod === 'daily' ? 'long' : undefined,
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: competitionPeriod === 'daily' ? 'numeric' : undefined
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Volume
+                      </div>
+                      <div className={`text-lg font-bold ${getRankStyle(selectedData.rank).textColor}`}>
+                        ${formatVolume(selectedData.volume)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Performance
+                      </div>
+                      <div className={`text-lg font-bold ${selectedData.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedData.change >= 0 ? '+' : ''}{selectedData.change.toFixed(1)}%
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Rank
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-full ${getRankStyle(selectedData.rank).bgColor} flex items-center justify-center`}>
+                          <span className="text-sm font-bold text-white">{selectedData.rank}</span>
+                        </div>
+                        <span className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          #{selectedData.rank}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-300/20 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Users className={`w-4 h-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                      </div>
+                      <div>
+                        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Participants
+                        </div>
+                        <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {selectedData.participants} traders
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Award className={`w-4 h-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                      </div>
+                      <div>
+                        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Prize Pool
+                        </div>
+                        <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {formatPrizePool(selectedData.prizePool)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Legend */}
+              <div className="mt-4 flex items-center justify-center gap-6 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>1st Place</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-orange-500"></div>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Top 3</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Top 5</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Top 10</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-gray-500"></div>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Others</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Active</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

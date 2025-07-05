@@ -1,9 +1,10 @@
 export interface Token {
-  symbol: string;
-  name: string;
+  chainId: number;
   address: string;
+  name: string;
+  symbol: string;
   decimals: number;
-  logoURI?: string;
+  logoURI: string;
   price?: number;
   change24h?: number;
   volume24h?: number;

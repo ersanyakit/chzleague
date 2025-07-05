@@ -7,9 +7,10 @@ import MinimalLeaderboardEntry from './components/MinimalLeaderboardEntry';
 import CompactUserStats from './components/CompactUserStats';
 import SimpleTokenList from './components/SimpleTokenList';
 import { LeaderboardEntry as LeaderboardEntryType, LeaderboardStats, UserStats, Token } from './types/leaderboard';
+import { useTheme } from './contexts/ThemeContext';
 
 function App() {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const { isDarkMode, toggleTheme } = useTheme();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,10 +18,12 @@ function App() {
 
   // Mock data
   const nativeToken: Token = {
+    chainId: 88888,
     symbol: 'CHZ',
     name: 'Chiliz',
     address: '0x0000000000000000000000000000000000000000',
     decimals: 18,
+    logoURI: '',
     price: 0.087,
     change24h: 12.5,
     volume24h: 2400000,
@@ -28,10 +31,12 @@ function App() {
   };
 
   const baseToken: Token = {
+    chainId: 88888,
     symbol: 'USDT',
     name: 'Tether USD',
     address: '0xa0b86a33e6441e0a7a5abcf5d45b37b1a11b7e9f',
     decimals: 6,
+    logoURI: '',
     price: 1.00,
     change24h: 0.1,
     volume24h: 1800000,
@@ -41,20 +46,24 @@ function App() {
   const mockTokens: Token[] = [
     baseToken,
     { 
+      chainId: 88888,
       symbol: 'USDC', 
       name: 'USD Coin', 
       address: '0xa0b86a33e6441e0a7a5abcf5d45b37b1a11b7e9f', 
       decimals: 6,
+      logoURI: '',
       price: 1.00,
       change24h: -0.05,
       volume24h: 1200000,
       marketCap: 32000000000
     },
     { 
+      chainId: 88888,
       symbol: 'WETH', 
       name: 'Wrapped Ethereum', 
       address: '0xa0b86a33e6441e0a7a5abcf5d45b37b1a11b7e9f', 
       decimals: 18,
+      logoURI: '',
       price: 2450.75,
       change24h: 8.3,
       volume24h: 890000,
@@ -178,46 +187,22 @@ function App() {
         : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
     }`}>
       {/* Minimal Header */}
-      <div className="sticky top-0 z-50 backdrop-blur-xl border-b border-white/10">
-        <div className="flex justify-between items-center p-4">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-red-500/20' : 'bg-red-50'}`}>
-              <BarChart3 className={`w-6 h-6 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
-            </div>
-            <div>
-              <h1 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Chiliz Volume Competition
-              </h1>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Trading volume leaderboard
-              </p>
-            </div>
+      <div className="sticky top-0 z-50 backdrop-blur-xl ">
+   
+      <div className='w-full'>
+          <VolumeCompetitionCalendar
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                isDarkMode={isDarkMode}
+              />
           </div>
-          
-          <div className="flex items-center gap-3">
-            <div className={`px-3 py-1.5 rounded-lg text-sm ${
-              isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-600'
-            }`}>
-              Live
-            </div>
-            
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-xl transition-all ${
-                isDarkMode 
-                  ? 'bg-gray-800/50 text-yellow-400 hover:bg-gray-800' 
-                  : 'bg-white/50 text-gray-600 hover:bg-white/70'
-              } backdrop-blur-sm`}
-            >
-              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-          </div>
-        </div>
+      
       </div>
 
       {/* Main Content */}
       <div className="p-4">
         <div className="max-w-6xl mx-auto">
+         
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             
             {/* Token List - Left Sidebar */}
@@ -233,11 +218,7 @@ function App() {
             {/* Main Leaderboard */}
             <div className="lg:col-span-6 space-y-4">
               {/* Volume Competition Calendar */}
-              <VolumeCompetitionCalendar
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-                isDarkMode={isDarkMode}
-              />
+           
 
               {/* Stats */}
               <MinimalStats
