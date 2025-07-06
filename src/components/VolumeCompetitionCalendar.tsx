@@ -13,6 +13,8 @@ interface VolumeCompetitionCalendarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   onFetchData?: (date: Date, period: CompetitionPeriod) => void;
+  competitionPeriod: CompetitionPeriod;
+  setCompetitionPeriod: React.Dispatch<React.SetStateAction<CompetitionPeriod>>;
 }
 
 type CompetitionPeriod = 'daily' | 'weekly' | 'monthly';
@@ -29,10 +31,11 @@ interface CompetitionData {
 const VolumeCompetitionCalendar: React.FC<VolumeCompetitionCalendarProps> = ({
   selectedDate,
   onDateSelect,
-  onFetchData
+  onFetchData,
+  competitionPeriod,
+  setCompetitionPeriod
 }) => {
   const { isDarkMode, toggleTheme } = useTheme();
-  const [competitionPeriod, setCompetitionPeriod] = useState<CompetitionPeriod>('daily');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isCollapsed, setIsCollapsed] = useState(false);
   
