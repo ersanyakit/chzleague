@@ -117,7 +117,7 @@ const SwapDetails: React.FC<SwapDetailsProps> = ({ ticker, address }) => {
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className="min-h-screen">
         <div className="max-w-6xl mx-auto p-6">
           <div className="flex flex-col items-center justify-center h-64 gap-4">
             <div className="w-8 h-8 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
@@ -132,7 +132,7 @@ const SwapDetails: React.FC<SwapDetailsProps> = ({ ticker, address }) => {
 
   if (error) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className="min-h-screen">
         <div className="max-w-6xl mx-auto p-6">
           <div className="flex flex-col items-center justify-center h-64 gap-4">
             <div className={`text-lg ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
@@ -159,7 +159,7 @@ const SwapDetails: React.FC<SwapDetailsProps> = ({ ticker, address }) => {
   const avgTransactionSize = totalVolume / totalTransactions;
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className="min-h-screen">
       <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className={`mb-8 p-6 rounded-xl border ${

@@ -390,7 +390,7 @@ function App() {
   const { isDarkMode } = useTheme();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {currentView === 'swapDetails' ? (
         // SwapDetails View
         <div>
@@ -419,7 +419,9 @@ function App() {
         // Main View
         <>
           {/* Modern Header */}
-          <div className="sticky top-0 z-50  border-b border-gray-200 shadow-sm">
+          <div className={`sticky top-0 z-50 border-b shadow-sm ${
+            isDarkMode ? 'border-gray-800' : 'border-gray-200'
+          }`}>
             <div className='w-full'>
               <VolumeCompetitionCalendar
                 selectedDate={selectedDate}
@@ -453,23 +455,33 @@ function App() {
                       placeholder="Search traders..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className={`w-full pl-12 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${
+                        isDarkMode
+                          ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
+                          : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
+                      }`}
                     />
                   </div>
                   
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className="p-3 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors duration-200"
+                    className={`p-3 rounded-xl border transition-colors duration-200 ${
+                      isDarkMode
+                        ? 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
                   >
                     <Filter className="w-5 h-5" />
                   </button>
                 </div>
 
                 {/* Leaderboard */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className={`rounded-xl border p-6 ${
+                  isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                }`}>
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">Top Traders</h2>
-                    <span className="text-sm text-gray-500 font-medium">
+                    <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Top Traders</h2>
+                    <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       {filteredEntries.length} traders
                     </span>
                   </div>
@@ -477,8 +489,10 @@ function App() {
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {loading || tradersLoading ? (
                       <div className="flex flex-col items-center justify-center h-32 gap-3">
-                        <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
-                        <div className="text-sm text-gray-500">
+                        <div className={`w-8 h-8 border-2 border-t-blue-500 rounded-full animate-spin ${
+                          isDarkMode ? 'border-gray-600' : 'border-gray-300'
+                        }`} />
+                        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           {loading ? 'Loading traders...' : 'Fetching new data...'}
                         </div>
                       </div>
@@ -528,23 +542,33 @@ function App() {
                         placeholder="Search traders..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${
+                          isDarkMode
+                            ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
+                            : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
+                        }`}
                       />
                     </div>
                     
                     <button
                       onClick={() => setShowFilters(!showFilters)}
-                      className="p-3 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors duration-200"
+                      className={`p-3 rounded-xl border transition-colors duration-200 ${
+                        isDarkMode
+                          ? 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                      }`}
                     >
                       <Filter className="w-5 h-5" />
                     </button>
                   </div>
 
                   {/* Leaderboard */}
-                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className={`rounded-xl border p-6 ${
+                    isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
                     <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-gray-900">Top Traders</h2>
-                      <span className="text-sm text-gray-500 font-medium">
+                      <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Top Traders</h2>
+                      <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         {filteredEntries.length} traders
                       </span>
                     </div>
@@ -552,8 +576,10 @@ function App() {
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {loading || tradersLoading ? (
                         <div className="flex flex-col items-center justify-center h-32 gap-3">
-                          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
-                          <div className="text-sm text-gray-500">
+                          <div className={`w-8 h-8 border-2 border-t-blue-500 rounded-full animate-spin ${
+                            isDarkMode ? 'border-gray-600' : 'border-gray-300'
+                          }`} />
+                          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             {loading ? 'Loading traders...' : 'Fetching new data...'}
                           </div>
                         </div>
