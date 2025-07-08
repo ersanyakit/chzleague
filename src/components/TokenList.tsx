@@ -192,10 +192,10 @@ const TokenList: React.FC<TokenListProps> = () => {
                 <div className="relative">
                   {getTokenLogo(token)}
                   {/* Fallback symbol display */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
                     selectedToken?.address === token.address ? 'bg-red-500' : 'bg-gray-500'
                   } hidden`}>
-                    {token.symbol.charAt(0)}
+                  {token.symbol.charAt(0)}
                   </div>
                   {/* Selection indicator */}
                   {selectedToken?.address === token.address && (

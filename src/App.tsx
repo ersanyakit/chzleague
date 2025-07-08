@@ -5,20 +5,48 @@ import VolumeCompetitionCalendar from './components/VolumeCompetitionCalendar';
 import MinimalStats from './components/MinimalStats';
 import MinimalLeaderboardEntry from './components/MinimalLeaderboardEntry';
 import CompactUserStats from './components/CompactUserStats';
-import SimpleTokenList from './components/SimpleTokenList';
+import SwapDetails from './components/SwapDetails';
 import { LeaderboardEntry as LeaderboardEntryType, LeaderboardStats, UserStats, Token } from './types/leaderboard';
 import { useTheme, useTokens } from './contexts/ThemeContext';
+import GetRecentSwaps from './components/GetRecentSwaps';
 
 function App() {
-  const { isDarkMode, toggleTheme } = useTheme();
   const { selectedToken } = useTokens();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [competitionPeriod, setCompetitionPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [competitionPeriod, setCompetitionPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [tradersLoading, setTradersLoading] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntryType[]>([]);
+  
+  // Routing states
+  const [currentView, setCurrentView] = useState<'main' | 'swapDetails'>('main');
+  const [selectedAddress, setSelectedAddress] = useState<string>('');
+  const [selectedTicker, setSelectedTicker] = useState<string>('');
+
+  const handleAddressClick = (address: string, ticker?: string) => {
+    // Eğer ticker verilmezse, seçilen token'ın symbol'ünü kullan
+    const tickerToUse = ticker || selectedToken?.symbol || 'CHZ';
+    
+    setSelectedAddress(address);
+    setSelectedTicker(tickerToUse);
+    setCurrentView('swapDetails');
+    
+    // URL'yi güncelle
+    const newUrl = `${window.location.origin}${window.location.pathname}?view=swapDetails&ticker=${tickerToUse}&address=${address}`;
+    window.history.pushState({ view: 'swapDetails', ticker: tickerToUse, address }, '', newUrl);
+  };
+
+  const handleBackToMain = () => {
+    setCurrentView('main');
+    setSelectedAddress('');
+    setSelectedTicker('');
+    
+    // URL'yi ana sayfaya geri döndür
+    const newUrl = `${window.location.origin}${window.location.pathname}`;
+    window.history.pushState({ view: 'main' }, '', newUrl);
+  };
 
   // Mock data
   const nativeToken: Token = {
@@ -150,6 +178,36 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // URL'den parametreleri oku ve browser navigation'ı destekle
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const view = urlParams.get('view');
+      const ticker = urlParams.get('ticker');
+      const address = urlParams.get('address');
+      
+      if (view === 'swapDetails' && ticker && address) {
+        setCurrentView('swapDetails');
+        setSelectedTicker(ticker);
+        setSelectedAddress(address);
+      } else {
+        setCurrentView('main');
+        setSelectedTicker('');
+        setSelectedAddress('');
+      }
+    };
+
+    // İlk yükleme
+    handlePopState();
+    
+    // Browser navigation events
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   // Initial data fetch
   useEffect(() => {
     fetchData(selectedDate, competitionPeriod, selectedToken);
@@ -162,7 +220,7 @@ function App() {
   );
 
   // Fetch data function for calendar selection
-  const fetchData = async (date: Date, period: 'daily' | 'weekly' | 'monthly', token: Token | null) => {
+  const fetchData = async (date: Date, period: 'daily' | 'weekly' | 'monthly' | 'yearly', token: Token | null) => {
     if (!token) return;
     console.log(`Fetching data for ${period} period on ${date.toLocaleDateString()} and token ${token.symbol}`);
     setTradersLoading(true);
@@ -329,226 +387,201 @@ function App() {
     fetchData(selectedDate, competitionPeriod, selectedToken);
   }, [selectedDate, competitionPeriod, selectedToken]);
 
+  const { isDarkMode } = useTheme();
+
   return (
-    <div className={`min-h-screen transition-all duration-300 ${
-      isDarkMode 
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
-        : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
-    }`}>
-      {/* Mobile Header */}
-      <div className="sticky top-0 z-50 backdrop-blur-xl">
-        <div className='w-full'>
-          <VolumeCompetitionCalendar
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            onFetchData={(date, period) => fetchData(date, period, selectedToken)}
-            competitionPeriod={competitionPeriod}
-            setCompetitionPeriod={setCompetitionPeriod}
-          />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="p-2 sm:p-4">
-        <div className="max-w-6xl mx-auto">
-          
-          {/* Mobile Layout */}
-          <div className="block lg:hidden space-y-4">
-            {/* Token List - Full Width on Mobile */}
-            <div className="w-full">
-              <SimpleTokenList
-                onFetchData={fetchTokenData}
-              />
-            </div>
-
-            {/* Stats */}
-            <MinimalStats
-              stats={mockStats}
-              nativeToken={nativeToken}
-              baseToken={baseToken}
-            />
-
-            {/* Search & Filters */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                }`} />
-                <input
-                  type="text"
-                  placeholder="Search traders..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm ${
-                    isDarkMode 
-                      ? 'bg-gray-800/50 border-gray-700/50 text-gray-300 placeholder-gray-400' 
-                      : 'bg-white/80 border-gray-200 text-gray-700 placeholder-gray-500'
-                  } focus:outline-none focus:ring-2 focus:ring-red-500/40 backdrop-blur-sm`}
-                />
-              </div>
-              
+    <div className="min-h-screen bg-gray-50">
+      {currentView === 'swapDetails' ? (
+        // SwapDetails View
+        <div>
+          {/* Back Button Header */}
+          <div className={`sticky top-0 z-50 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-b shadow-sm`}>
+            <div className="max-w-6xl mx-auto px-6 py-4">
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`p-3 rounded-xl border transition-all ${
+                onClick={handleBackToMain}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 ${
                   isDarkMode
-                    ? 'bg-gray-800/50 border-gray-700/50 text-gray-300 hover:bg-gray-700/50'
-                    : 'bg-white/80 border-gray-200 text-gray-600 hover:bg-gray-50'
-                } backdrop-blur-sm`}
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
               >
-                <Filter className="w-5 h-5" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Leaderboard
               </button>
             </div>
-
-            {/* Leaderboard */}
-            <div className={`${
-              isDarkMode ? 'bg-gray-900/40' : 'bg-white/60'
-            } backdrop-blur-xl p-4 rounded-xl border ${
-              isDarkMode ? 'border-gray-700/30' : 'border-white/40'
-            }`}>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Top Traders
-                </h3>
-                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {filteredEntries.length} traders
-                </span>
-              </div>
-
-              <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
-                {loading || tradersLoading ? (
-                  <div className="flex flex-col items-center justify-center h-32 gap-3">
-                    <div className={`animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 ${
-                      isDarkMode ? 'border-red-400' : 'border-red-600'
-                    }`} />
-                    <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {loading ? 'Loading traders...' : 'Fetching new data...'}
-                    </div>
-                  </div>
-                ) : (
-                  filteredEntries.map((entry, index) => (
-                    <MinimalLeaderboardEntry
-                      key={entry.address}
-                      entry={entry}
-                      index={index}
-                      nativeToken={nativeToken}
-                      baseToken={baseToken}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* User Stats - Full Width on Mobile */}
-            <div className="w-full">
-              <CompactUserStats
-                userStats={mockUserStats}
-                nativeToken={nativeToken}
-                baseToken={baseToken}
+          </div>
+          
+          <SwapDetails ticker={selectedTicker} address={selectedAddress} />
+        </div>
+      ) : (
+        // Main View
+        <>
+          {/* Modern Header */}
+          <div className="sticky top-0 z-50  border-b border-gray-200 shadow-sm">
+            <div className='w-full'>
+              <VolumeCompetitionCalendar
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                onFetchData={(date, period) => fetchData(date, period, selectedToken)}
+                competitionPeriod={competitionPeriod}
+                setCompetitionPeriod={setCompetitionPeriod}
               />
             </div>
           </div>
 
-          {/* Desktop Layout */}
-          <div className="hidden lg:grid lg:grid-cols-12 gap-4">
-            
-            {/* Token List - Left Sidebar */}
-            <div className="lg:col-span-3">
-              <SimpleTokenList
-                onFetchData={fetchTokenData}
-              />
-            </div>
+          {/* Main Content */}
+          <div className="p-4 lg:p-6">
+            <div className="max-w-7xl mx-auto">
+              
+              {/* Mobile Layout */}
+              <div className="block lg:hidden space-y-6">
+                {/* Stats */}
+                <MinimalStats
+                  stats={mockStats}
+                  nativeToken={nativeToken}
+                  baseToken={baseToken}
+                />
 
-            {/* Main Leaderboard */}
-            <div className="lg:col-span-6 space-y-4">
-              {/* Stats */}
-              <MinimalStats
-                stats={mockStats}
-                nativeToken={nativeToken}
-                baseToken={baseToken}
-              />
+                {/* Search & Filters */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search traders..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="p-3 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    <Filter className="w-5 h-5" />
+                  </button>
+                </div>
 
-              {/* Search & Filters */}
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                  }`} />
-                  <input
-                    type="text"
-                    placeholder="Search traders..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 rounded-xl border ${
-                      isDarkMode 
-                        ? 'bg-gray-800/50 border-gray-700/50 text-gray-300 placeholder-gray-400' 
-                        : 'bg-white/80 border-gray-200 text-gray-700 placeholder-gray-500'
-                    } focus:outline-none focus:ring-2 focus:ring-red-500/40 backdrop-blur-sm`}
+                {/* Leaderboard */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-900">Top Traders</h2>
+                    <span className="text-sm text-gray-500 font-medium">
+                      {filteredEntries.length} traders
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {loading || tradersLoading ? (
+                      <div className="flex flex-col items-center justify-center h-32 gap-3">
+                        <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                        <div className="text-sm text-gray-500">
+                          {loading ? 'Loading traders...' : 'Fetching new data...'}
+                        </div>
+                      </div>
+                    ) : (
+                      filteredEntries.map((entry, index) => (
+                        <MinimalLeaderboardEntry
+                          key={entry.address}
+                          entry={entry}
+                          index={index}
+                          nativeToken={nativeToken}
+                          baseToken={baseToken}
+                          onAddressClick={handleAddressClick}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* User Stats */}
+                <div className="w-full">
+                  <CompactUserStats
+                    userStats={mockUserStats}
+                    nativeToken={nativeToken}
+                    baseToken={baseToken}
                   />
                 </div>
+              </div>
+
+              {/* Desktop Layout */}
+              <div className="hidden lg:grid lg:grid-cols-12 gap-6">
                 
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`p-3 rounded-xl border transition-all ${
-                    isDarkMode
-                      ? 'bg-gray-800/50 border-gray-700/50 text-gray-300 hover:bg-gray-700/50'
-                      : 'bg-white/80 border-gray-200 text-gray-600 hover:bg-gray-50'
-                  } backdrop-blur-sm`}
-                >
-                  <Filter className="w-5 h-5" />
-                </button>
-              </div>
+                {/* Main Leaderboard */}
+                <div className="lg:col-span-8 space-y-6">
+                  {/* Stats */}
+                  <MinimalStats
+                    stats={mockStats}
+                    nativeToken={nativeToken}
+                    baseToken={baseToken}
+                  />
 
-              {/* Leaderboard */}
-              <div className={`${
-                isDarkMode ? 'bg-gray-900/40' : 'bg-white/60'
-              } backdrop-blur-xl p-4 rounded-xl border ${
-                isDarkMode ? 'border-gray-700/30' : 'border-white/40'
-              }`}>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Top Traders
-                  </h3>
-                  <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {filteredEntries.length} traders
-                  </span>
-                </div>
-
-                <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
-                  {loading || tradersLoading ? (
-                    <div className="flex flex-col items-center justify-center h-32 gap-3">
-                      <div className={`animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 ${
-                        isDarkMode ? 'border-red-400' : 'border-red-600'
-                      }`} />
-                      <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {loading ? 'Loading traders...' : 'Fetching new data...'}
-                      </div>
-                    </div>
-                  ) : (
-                    filteredEntries.map((entry, index) => (
-                      <MinimalLeaderboardEntry
-                        key={entry.address}
-                        entry={entry}
-                        index={index}
-                        nativeToken={nativeToken}
-                        baseToken={baseToken}
+                  {/* Search & Filters */}
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search traders..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
-                    ))
-                  )}
+                    </div>
+                    
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="p-3 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors duration-200"
+                    >
+                      <Filter className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Leaderboard */}
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-gray-900">Top Traders</h2>
+                      <span className="text-sm text-gray-500 font-medium">
+                        {filteredEntries.length} traders
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {loading || tradersLoading ? (
+                        <div className="flex flex-col items-center justify-center h-32 gap-3">
+                          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                          <div className="text-sm text-gray-500">
+                            {loading ? 'Loading traders...' : 'Fetching new data...'}
+                          </div>
+                        </div>
+                      ) : (
+                        filteredEntries.map((entry, index) => (
+                          <MinimalLeaderboardEntry
+                            key={entry.address}
+                            entry={entry}
+                            index={index}
+                            nativeToken={nativeToken}
+                            baseToken={baseToken}
+                            onAddressClick={handleAddressClick}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Sidebar */}
+                <div className="lg:col-span-4">
+                  <GetRecentSwaps onAddressClick={handleAddressClick} />
                 </div>
               </div>
-            </div>
-
-            {/* User Stats - Right Sidebar */}
-            <div className="lg:col-span-3">
-              <CompactUserStats
-                userStats={mockUserStats}
-                nativeToken={nativeToken}
-                baseToken={baseToken}
-              />
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

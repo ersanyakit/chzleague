@@ -8,7 +8,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <TokenProvider>
-        <App />
+    <App />
       </TokenProvider>
     </ThemeProvider>
   </StrictMode>

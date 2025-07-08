@@ -9,13 +9,15 @@ interface MinimalLeaderboardEntryProps {
   index: number;
   nativeToken: Token;
   baseToken: Token;
+  onAddressClick?: (address: string, ticker?: string) => void;
 }
 
 const MinimalLeaderboardEntry: React.FC<MinimalLeaderboardEntryProps> = ({
   entry,
   index,
   nativeToken,
-  baseToken
+  baseToken,
+  onAddressClick
 }) => {
   const { isDarkMode } = useTheme();
 
@@ -61,9 +63,12 @@ const MinimalLeaderboardEntry: React.FC<MinimalLeaderboardEntryProps> = ({
           
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className={`font-semibold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {entry.nickname || `${entry.address.slice(0, 6)}...${entry.address.slice(-4)}`}
-              </span>
+              <button
+                onClick={() => onAddressClick?.(entry.address)}
+                className={`font-semibold text-sm ${isDarkMode ? 'text-white hover:text-blue-400' : 'text-gray-900 hover:text-blue-600'} whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] transition-colors duration-200`}
+              >
+                {`${entry.address.slice(0, 6)}...${entry.address.slice(-4)}`}
+              </button>
               {entry.isVerified && <Shield className="w-3 h-3 text-red-500" />}
             </div>
             <div className="flex items-center gap-2">
